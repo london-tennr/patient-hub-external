@@ -63,6 +63,9 @@ export function PatientHeader({ patient }: PatientHeaderProps) {
           <h1 className="text-2xl font-semibold text-text-primary">
             {patient.firstName} {patient.lastName}
           </h1>
+          <p className="text-sm text-text-secondary mt-0.5">
+            {new Date(patient.dob).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' })} · MRN {patient.mrn} · ID {patient.patientId}
+          </p>
         </div>
 
         <div className="flex items-center gap-2">

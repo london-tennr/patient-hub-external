@@ -64,6 +64,11 @@ export function Sidebar({ collapsed = false, onCollapsedChange }: SidebarProps) 
           href: '/patients',
           icon: Users,
         },
+        {
+          label: 'Explore MVP',
+          href: '/explore',
+          icon: Users,
+        },
       ],
     },
   ];

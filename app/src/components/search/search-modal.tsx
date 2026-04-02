@@ -9,7 +9,7 @@ interface SearchOption {
   label: string;
   value: string;
   category?: string;
-  resultType: 'patient' | 'order';
+  resultType: 'patient' | 'order' | 'easter_egg';
   data: SearchResult;
   [key: string]: string | string[] | SearchResult | undefined;
 }
@@ -17,6 +17,7 @@ interface SearchOption {
 interface SearchModalProps {
   onSelectPatient: (patientId: string) => void;
   onSelectOrder: (orderId: string) => void;
+  onSelectEasterEgg?: () => void;
 }
 
 // Mock data for development
@@ -89,11 +90,11 @@ const stageBadgeVariant: Record<string, 'default' | 'secondary' | 'outline' | 'd
   complete: 'default',
 };
 
-export function SearchModal({ onSelectPatient, onSelectOrder }: SearchModalProps) {
+export function SearchModal({ onSelectPatient, onSelectOrder, onSelectEasterEgg }: SearchModalProps) {
   const options: SearchOption[] = useMemo(() => {
     const allResults = [...mockPatients, ...mockOrders];
 
-    return allResults.map((result): SearchOption => {
+    const mapped = allResults.map((result): SearchOption => {
       if (result.type === 'patient') {
         const { patient } = result;
         return {
@@ -101,7 +102,6 @@ export function SearchModal({ onSelectPatient, onSelectOrder }: SearchModalProps
           value: patient.id,
           resultType: 'patient',
           data: result,
-          // Additional searchable fields
           category: 'Patient',
         };
       } else {
@@ -115,10 +115,23 @@ export function SearchModal({ onSelectPatient, onSelectOrder }: SearchModalProps
         };
       }
     });
+
+    // Easter egg: hidden result that only appears when searching "illustration"
+    mapped.push({
+      label: 'illustration',
+      value: 'easter-egg',
+      resultType: 'easter_egg',
+      data: mockPatients[0],
+      category: 'Explore',
+    });
+
+    return mapped;
   }, []);
 
   const handleSelectOption = (option: SearchOption) => {
-    if (option.resultType === 'patient') {
+    if (option.resultType === 'easter_egg') {
+      onSelectEasterEgg?.();
+    } else if (option.resultType === 'patient') {
       onSelectPatient(option.value);
     } else {
       onSelectOrder(option.value);
@@ -170,6 +183,20 @@ export function SearchModal({ onSelectPatient, onSelectOrder }: SearchModalProps
               {order.stage.charAt(0).toUpperCase() + order.stage.slice(1)}
             </Badge>
           </div>
+        </div>
+      );
+    }
+
+    if (option.resultType === 'easter_egg') {
+      return (
+        <div className="flex items-center justify-between w-full">
+          <div>
+            <p className="font-medium">Illustration Mode</p>
+            <p className="text-sm text-muted-foreground">
+              Explore the patient view with a different aesthetic
+            </p>
+          </div>
+          <Badge variant="outline">Explore</Badge>
         </div>
       );
     }

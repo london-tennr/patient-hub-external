@@ -10,7 +10,7 @@ const imgAvatar = "https://www.figma.com/api/mcp/asset/77762ccd-cf45-40a3-8e54-d
 
 interface TimelineActivity {
   id: string;
-  type: 'automated' | 'comment';
+  type: 'verification' | 'document' | 'referral' | 'order_complete' | 'prior_auth' | 'comment';
   title: string;
   description?: string;
   author?: {
@@ -93,12 +93,12 @@ export function SidebarTimeline({ activities, onAddComment }: SidebarTimelinePro
   const filteredActivities = activities.filter(activity => {
     if (filter === 'all') return true;
     if (filter === 'comments') return activity.type === 'comment';
-    if (filter === 'automated') return activity.type === 'automated';
+    if (filter === 'automated') return activity.type !== 'comment';
     return true;
   });
 
   const commentCount = activities.filter(a => a.type === 'comment').length;
-  const automatedCount = activities.filter(a => a.type === 'automated').length;
+  const automatedCount = activities.filter(a => a.type !== 'comment').length;
 
   return (
     <div className="flex flex-col h-full bg-bg-white relative">
@@ -138,11 +138,11 @@ export function SidebarTimeline({ activities, onAddComment }: SidebarTimelinePro
                       "size-7",
                       isComment ? "bg-bg-quartiary" : "bg-bg-tertiary"
                     )}>
-                      {activity.type === 'automated' ? (
+                      {activity.type !== 'comment' ? (
                         <AvatarImage src={imgAvatar} />
                       ) : null}
                       <AvatarFallback className="text-xs text-text-primary">
-                        {activity.type === 'automated' ? 'AU' : activity.author?.initials || 'U'}
+                        {activity.type !== 'comment' ? 'AU' : activity.author?.initials || 'U'}
                       </AvatarFallback>
                     </Avatar>
                     {!isLast && (
@@ -161,11 +161,11 @@ export function SidebarTimeline({ activities, onAddComment }: SidebarTimelinePro
                         "text-[13px] leading-5",
                         isComment ? "text-text-primary font-medium" : "text-text-secondary"
                       )}>
-                        {activity.type === 'automated' ? 'Automated' : activity.author?.name}
+                        {activity.type !== 'comment' ? 'Automated' : activity.author?.name}
                       </span>
                       <span className="text-[13px] leading-5 text-text-secondary truncate">
                         {activity.title.replace(
-                          activity.type === 'automated' ? 'Automated ' : (activity.author?.name || '') + ' ',
+                          activity.type !== 'comment' ? 'Automated ' : (activity.author?.name || '') + ' ',
                           ''
                         )}
                       </span>

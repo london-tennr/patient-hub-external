@@ -5,6 +5,8 @@ import {
   SidebarSimple,
   CaretLeft,
   CaretDown,
+  Copy,
+  Check,
 } from '@phosphor-icons/react';
 import {
   Tabs,
@@ -25,12 +27,16 @@ import { InsuranceForm } from '../insurance/insurance-form';
 import { VerificationHistory } from '../insurance/verification-history';
 import { OrdersList } from '../orders/orders-list';
 import { DocumentsTableCard } from '../documents/documents-table-card';
+import { EngagementCard } from './engagement-card';
+import { ReferringProviderCard } from './referring-provider-card';
+import { PayerContactCard } from './payer-contact-card';
 
 interface TimelineActivity {
   id: string;
-  type: 'automated' | 'comment';
+  type: 'verification' | 'document' | 'referral' | 'order_complete' | 'prior_auth' | 'comment';
   title: string;
   description?: string;
+  orderId?: string;
   author?: {
     name: string;
     initials: string;
@@ -69,6 +75,36 @@ const mockVerificationHistory = [
   },
 ];
 
+function CopyableValue({ label, value }: { label: string; value: string }) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    navigator.clipboard.writeText(value);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  };
+
+  return (
+    <span
+      onClick={handleCopy}
+      className="relative inline-flex items-center cursor-pointer group hover:text-text-primary transition-colors"
+    >
+      {label} {value}
+      <span className={cn(
+        'absolute -right-0.5 top-1/2 -translate-y-1/2 flex items-center justify-center size-4 rounded-sm transition-opacity',
+        copied ? 'opacity-100 bg-white shadow-xs' : 'opacity-0 group-hover:opacity-100 group-hover:bg-white group-hover:shadow-xs'
+      )}>
+        {copied ? (
+          <Check weight="bold" className="size-3 text-[var(--green-9)]" />
+        ) : (
+          <Copy weight="regular" className="size-3 text-text-secondary" />
+        )}
+      </span>
+    </span>
+  );
+}
+
 // Sidebar width constraints (as percentages of container)
 const MIN_SIDEBAR_PERCENT = 15;
 const MAX_SIDEBAR_PERCENT = 35;
@@ -81,7 +117,7 @@ export function PatientSummaryVariantB({
   documents = [],
   onAddComment,
 }: PatientSummaryVariantBProps) {
-  const [isRightSidebarOpen, setIsRightSidebarOpen] = useState(true);
+  const [isRightSidebarOpen, setIsRightSidebarOpen] = useState(false);
   const [sidebarPercent, setSidebarPercent] = useState(DEFAULT_SIDEBAR_PERCENT);
   const [isResizing, setIsResizing] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -177,6 +213,11 @@ export function PatientSummaryVariantB({
                 <h2 className="text-[30px] leading-[36px] font-serif font-light text-text-primary">
                   {patient.firstName} {patient.lastName}
                 </h2>
+                <p className="text-sm text-text-secondary flex items-center gap-0.5">
+                  {formatDate(patient.dob)} ·{' '}
+                  <CopyableValue label="MRN" value={patient.mrn.replace(/\D/g, '') || patient.mrn} /> ·{' '}
+                  <CopyableValue label="ID" value={patient.patientId} />
+                </p>
               </div>
 
               {/* Sync Status and Sidebar Toggle */}
@@ -279,9 +320,18 @@ export function PatientSummaryVariantB({
           {/* Scrollable Tab Content */}
           <div className="flex-1 overflow-y-auto px-6 pt-4 pb-6">
             {/* Summary Tab */}
-            <TabsContent value="summary" className="flex flex-col gap-4 mt-0">
-              <ActiveOrdersCard patientId={patient.id} orders={orders} />
-              <Timeline activities={activities} onAddComment={onAddComment} />
+            <TabsContent value="summary" className="mt-0">
+              <div className="grid grid-cols-3 gap-4 items-stretch">
+                <div className="col-span-2 flex flex-col gap-4">
+                  <ActiveOrdersCard patientId={patient.id} orders={orders} />
+                  <Timeline activities={activities} onAddComment={onAddComment} className="flex-1 min-h-0" />
+                </div>
+                <div className="flex flex-col gap-4">
+                  <EngagementCard />
+                  <PayerContactCard insurance={patient.primaryInsurance} />
+                  <ReferringProviderCard />
+                </div>
+              </div>
             </TabsContent>
 
             {/* Demographics Tab */}

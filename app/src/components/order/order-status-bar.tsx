@@ -1,42 +1,34 @@
 'use client';
 
 import { cn } from '@tennr/lasso/utils/cn';
-import type { PatientStatus } from '@/types/patient';
+import type { OrderStatus } from '@/types/order';
 
-export type StatusCategory = 'on_track' | 'action_required' | 'blocked' | 'closed';
-
-/** Maps each category to the underlying PatientStatus values it includes */
-export const STATUS_CATEGORY_MAP: Record<StatusCategory, PatientStatus[]> = {
-  on_track: ['on_track'],
-  action_required: ['missing_info', 'needs_attention'],
-  blocked: ['blocked'],
-  closed: ['completed', 'inactive'],
-};
+export type OrderStatusCategory = OrderStatus;
 
 const CATEGORY_CONFIG: {
-  id: StatusCategory;
+  id: OrderStatusCategory;
   label: string;
   dotColor: string;
 }[] = [
-  { id: 'on_track', label: 'On Track', dotColor: 'bg-[#4a7a4a]' },
-  { id: 'action_required', label: 'Action Required', dotColor: 'bg-[#c5a24d]' },
-  { id: 'blocked', label: 'Blocked', dotColor: 'bg-[#b44a3a]' },
-  { id: 'closed', label: 'Archived', dotColor: 'bg-[#8a8a7e]' },
+  { id: 'on_track', label: 'On Track', dotColor: 'bg-[var(--green-9)]' },
+  { id: 'missing_info', label: 'Missing Info', dotColor: 'bg-[var(--amber-9)]' },
+  { id: 'rejected', label: 'Rejected', dotColor: 'bg-[#b44a3a]' },
+  { id: 'completed', label: 'Completed', dotColor: 'bg-[#8a8a7e]' },
 ];
 
-interface PatientStatusBarProps {
-  statusCounts: Record<PatientStatus, number>;
+interface OrderStatusBarProps {
+  statusCounts: Record<OrderStatus, number>;
   totalCount: number;
-  activeCategory: StatusCategory | null;
-  onCategoryChange: (category: StatusCategory | null) => void;
+  activeCategory: OrderStatusCategory | null;
+  onCategoryChange: (category: OrderStatusCategory | null) => void;
 }
 
-export function PatientStatusBar({
+export function OrderStatusBar({
   statusCounts,
   totalCount,
   activeCategory,
   onCategoryChange,
-}: PatientStatusBarProps) {
+}: OrderStatusBarProps) {
   const isAllActive = activeCategory === null;
 
   return (
@@ -54,10 +46,7 @@ export function PatientStatusBar({
       </button>
 
       {CATEGORY_CONFIG.map((cat) => {
-        const count = STATUS_CATEGORY_MAP[cat.id].reduce(
-          (sum, s) => sum + statusCounts[s],
-          0
-        );
+        const count = statusCounts[cat.id] ?? 0;
         const isActive = activeCategory === cat.id;
 
         return (
@@ -80,4 +69,3 @@ export function PatientStatusBar({
     </div>
   );
 }
-

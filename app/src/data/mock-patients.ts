@@ -103,6 +103,7 @@ type TennrStatus = 'in_queue' | 'processing' | 'completed' | 'idle';
 interface CoherentState {
   status: PatientStatus;
   stage: PatientStage;
+  runningStages?: PatientStage[];
   tennrStatus: TennrStatus;
   priority: PatientPriority;
 }
@@ -180,9 +181,21 @@ function generateCoherentState(): CoherentState {
     tennrStatus = t < 0.3 ? 'completed' : t < 0.6 ? 'processing' : 'in_queue';
   }
 
+  // Pick random future stages as running (1-3 non-sequential stages)
+  const futureStages = stages.filter((_, idx) => idx > stageIndex);
+  const runningStages: PatientStage[] = [];
+  if (futureStages.length > 0) {
+    const numRunning = Math.min(futureStages.length, Math.floor(rand() * 3) + 1);
+    const shuffled = [...futureStages].sort(() => rand() - 0.5);
+    for (let j = 0; j < numRunning; j++) {
+      runningStages.push(shuffled[j]);
+    }
+  }
+
   return {
     status: 'on_track',
     stage,
+    runningStages,
     tennrStatus,
     priority: (['p4', 'p5', 'p6', 'p7'] as const)[Math.floor(rand() * 4)],
   };

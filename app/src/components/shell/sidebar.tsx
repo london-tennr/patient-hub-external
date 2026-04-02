@@ -60,7 +60,7 @@ export function Sidebar({ collapsed = false, onCollapsedChange }: SidebarProps) 
       label: 'Main',
       items: [
         {
-          label: 'Patients',
+          label: 'Explore',
           href: '/patients',
           icon: Users,
         },

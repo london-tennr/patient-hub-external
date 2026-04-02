@@ -6,10 +6,15 @@ import { MagnifyingGlass, SquareHalf, FunnelSimple, X } from '@phosphor-icons/re
 import { DataTableViewOptions } from '@tennr/lasso/data-table';
 import { FilterGroup, type FilterCategoryType, type FilterState } from '@tennr/lasso/filter-group';
 import { ButtonV2 } from '@tennr/lasso/buttonV2';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@tennr/lasso/tabs';
 import { usePatientsTable, PatientsTableContent, type OnFilterBy } from '@/components/patient/patients-table';
 import { PatientStatusBar, STATUS_CATEGORY_MAP, type StatusCategory } from '@/components/patient/patient-status-bar';
+import { useOrdersTable, OrdersTableContent } from '@/components/order/orders-table';
+import { OrderStatusBar, type OrderStatusCategory } from '@/components/order/order-status-bar';
 import { mockPatients } from '@/data/mock-patients';
+import { mockOrders } from '@/data/mock-orders';
 import type { Patient, PatientStatus, PatientPriority, PatientStage } from '@/types/patient';
+import type { OrderStatus } from '@/types/order';
 
 // Filter categories for the patients table
 const patientFilterCategories: FilterCategoryType[] = [
@@ -234,6 +239,44 @@ export default function PatientsPage() {
 
   const table = usePatientsTable(filteredPatients, handleFilterBy);
 
+  // Orders state
+  const [orderSearchValue, setOrderSearchValue] = useState('');
+  const [activeOrderCategory, setActiveOrderCategory] = useState<OrderStatusCategory | null>(null);
+
+  const orderStatusCounts = useMemo(() => {
+    const counts: Record<OrderStatus, number> = {
+      on_track: 0,
+      missing_info: 0,
+      rejected: 0,
+      completed: 0,
+    };
+    for (const order of mockOrders) {
+      counts[order.status]++;
+    }
+    return counts;
+  }, []);
+
+  const filteredOrders = useMemo(() => {
+    let result = mockOrders;
+
+    if (activeOrderCategory) {
+      result = result.filter((order) => order.status === activeOrderCategory);
+    }
+
+    if (orderSearchValue.trim()) {
+      const query = orderSearchValue.toLowerCase();
+      result = result.filter((order) =>
+        order.patientName.toLowerCase().includes(query) ||
+        order.orderType.toLowerCase().includes(query) ||
+        order.id.toLowerCase().includes(query)
+      );
+    }
+
+    return result;
+  }, [orderSearchValue, activeOrderCategory]);
+
+  const ordersTable = useOrdersTable(filteredOrders);
+
   const handlePatientClick = (patient: Patient) => {
     router.push(`/patients/${patient.id}`);
   };
@@ -246,83 +289,139 @@ export default function PatientsPage() {
     <div className="flex flex-col items-center w-full min-h-full px-6 py-8">
       <div className="flex flex-col w-full max-w-[1600px] gap-10">
         {/* Page Title */}
-        <div className="flex flex-row items-center justify-between w-full">
-          <h1 className="font-display font-light text-5xl text-foreground">Patients</h1>
+        <div className="flex flex-col gap-1">
+          <h1 className="font-display font-light text-5xl text-foreground">Explore</h1>
+          <p className="text-sm text-text-secondary">
+            Total <span className="font-semibold text-text-primary">{mockPatients.length} patients</span> <span className="font-semibold text-text-primary">{mockOrders.length} orders</span>
+          </p>
         </div>
 
-        {/* Status Filter Bar */}
-        <PatientStatusBar
-          statusCounts={statusCounts}
-          totalCount={mockPatients.length}
-          activeCategory={activeCategory}
-          onCategoryChange={setActiveCategory}
-        />
+        {/* Tabs */}
+        <Tabs defaultValue="patients" className="w-full flex flex-col gap-6">
+          <TabsList variant="line">
+            <TabsTrigger variant="line" value="patients">Patients</TabsTrigger>
+            <TabsTrigger variant="line" value="orders">Orders</TabsTrigger>
+          </TabsList>
 
-        {/* Table Container */}
-        <div className="flex flex-col w-full border border-border-secondary rounded-md overflow-hidden bg-white shadow-xs">
-          {/* Index Filter Top Bar */}
-          <div className="flex flex-col w-full border-b border-border">
-            <div className="flex items-center w-full p-2 gap-4 bg-white">
-              <div className="flex-1 flex items-center h-full gap-2">
-                {/* Search Input */}
-                <div className="bg-neutral-2 flex items-center gap-1 px-3 py-1 rounded-sm shadow-xs flex-1 h-8">
-                  <div className="size-4 shrink-0 flex items-center justify-center">
-                    <MagnifyingGlass weight="regular" className="text-muted-foreground w-full h-full" />
+          <TabsContent value="patients" className="flex flex-col gap-6 mt-0">
+            {/* Status Filter Bar */}
+            <PatientStatusBar
+              statusCounts={statusCounts}
+              totalCount={mockPatients.length}
+              activeCategory={activeCategory}
+              onCategoryChange={setActiveCategory}
+            />
+
+            {/* Table Container */}
+            <div className="flex flex-col w-full border border-border-secondary rounded-md overflow-hidden bg-white shadow-xs">
+              {/* Index Filter Top Bar */}
+              <div className="flex flex-col w-full border-b border-border">
+                <div className="flex items-center w-full p-2 gap-4 bg-white">
+                  <div className="flex-1 flex items-center h-full gap-2">
+                    {/* Search Input */}
+                    <div className="bg-neutral-2 flex items-center gap-1 px-3 py-1 rounded-sm shadow-xs flex-1 h-8">
+                      <div className="size-4 shrink-0 flex items-center justify-center">
+                        <MagnifyingGlass weight="regular" className="text-muted-foreground w-full h-full" />
+                      </div>
+                      <input
+                        type="text"
+                        value={searchValue}
+                        onChange={(e) => setSearchValue(e.target.value)}
+                        placeholder="Search by patient name, date of birth, MRN, internal ID, or Run ID"
+                        className="flex-1 bg-transparent border-none outline-none text-sm text-foreground placeholder:text-muted-foreground font-body h-full leading-[20px]"
+                      />
+                      {searchValue.length > 0 && (
+                        <button
+                          onClick={() => setSearchValue('')}
+                          className="size-4 shrink-0 flex items-center justify-center rounded-sm hover:bg-neutral-3 transition-colors"
+                          aria-label="Clear search"
+                        >
+                          <X weight="bold" className="size-3 text-muted-foreground" />
+                        </button>
+                      )}
+                    </div>
                   </div>
-                  <input
-                    type="text"
-                    value={searchValue}
-                    onChange={(e) => setSearchValue(e.target.value)}
-                    placeholder="Search by patient name, date of birth, MRN, internal ID, or Run ID"
-                    className="flex-1 bg-transparent border-none outline-none text-sm text-foreground placeholder:text-muted-foreground font-body h-full leading-[20px]"
-                  />
-                  {searchValue.length > 0 && (
+
+                  {/* View Toggles */}
+                  <div className="flex items-center gap-2">
+                    <DataTableViewOptions
+                      table={table}
+                      trigger={
+                        <button className="flex items-center justify-center size-7 rounded-full border border-border bg-white shadow-xs hover:bg-accent transition-colors">
+                          <SquareHalf weight="regular" className="w-4 h-4 text-foreground" />
+                        </button>
+                      }
+                    />
                     <button
-                      onClick={() => setSearchValue('')}
-                      className="size-4 shrink-0 flex items-center justify-center rounded-sm hover:bg-neutral-3 transition-colors"
-                      aria-label="Clear search"
+                      onClick={() => setIsFilterRowVisible(!isFilterRowVisible)}
+                      className={`flex items-center justify-center size-7 rounded-full border border-border bg-white shadow-xs hover:bg-accent transition-colors ${isFilterRowVisible ? 'bg-accent' : ''}`}
                     >
-                      <X weight="bold" className="size-3 text-muted-foreground" />
+                      <FunnelSimple weight="regular" className="w-4 h-4 text-foreground" />
                     </button>
-                  )}
+                  </div>
+                </div>
+
+                {/* Filters Bar */}
+                {isFilterRowVisible && (
+                  <div className="flex items-center gap-2 px-2 py-1.5 bg-white border-t border-border min-h-11">
+                    <FilterGroup
+                      filters={patientFilterCategories}
+                      state={filterState}
+                      onChange={setFilterState}
+                      onClearAll={handleClearFilters}
+                    />
+                  </div>
+                )}
+              </div>
+
+              {/* Patients Table */}
+              <PatientsTableContent table={table} onPatientClick={handlePatientClick} />
+            </div>
+          </TabsContent>
+
+          <TabsContent value="orders" className="flex flex-col gap-6 mt-0">
+            {/* Order Status Filter Bar */}
+            <OrderStatusBar
+              statusCounts={orderStatusCounts}
+              totalCount={mockOrders.length}
+              activeCategory={activeOrderCategory}
+              onCategoryChange={setActiveOrderCategory}
+            />
+
+            {/* Orders Table Container */}
+            <div className="flex flex-col w-full border border-border-secondary rounded-md overflow-hidden bg-white shadow-xs">
+              {/* Search Bar */}
+              <div className="flex items-center w-full p-2 gap-4 bg-white border-b border-border">
+                <div className="flex-1 flex items-center h-full gap-2">
+                  <div className="bg-neutral-2 flex items-center gap-1 px-3 py-1 rounded-sm shadow-xs flex-1 h-8">
+                    <div className="size-4 shrink-0 flex items-center justify-center">
+                      <MagnifyingGlass weight="regular" className="text-muted-foreground w-full h-full" />
+                    </div>
+                    <input
+                      type="text"
+                      value={orderSearchValue}
+                      onChange={(e) => setOrderSearchValue(e.target.value)}
+                      placeholder="Search"
+                      className="flex-1 bg-transparent border-none outline-none text-sm text-foreground placeholder:text-muted-foreground font-body h-full leading-[20px]"
+                    />
+                    {orderSearchValue.length > 0 && (
+                      <button
+                        onClick={() => setOrderSearchValue('')}
+                        className="size-4 shrink-0 flex items-center justify-center rounded-sm hover:bg-neutral-3 transition-colors"
+                        aria-label="Clear search"
+                      >
+                        <X weight="bold" className="size-3 text-muted-foreground" />
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
 
-              {/* View Toggles */}
-              <div className="flex items-center gap-2">
-                <DataTableViewOptions
-                  table={table}
-                  trigger={
-                    <button className="flex items-center justify-center size-7 rounded-full border border-border bg-white shadow-xs hover:bg-accent transition-colors">
-                      <SquareHalf weight="regular" className="w-4 h-4 text-foreground" />
-                    </button>
-                  }
-                />
-                <button
-                  onClick={() => setIsFilterRowVisible(!isFilterRowVisible)}
-                  className={`flex items-center justify-center size-7 rounded-full border border-border bg-white shadow-xs hover:bg-accent transition-colors ${isFilterRowVisible ? 'bg-accent' : ''}`}
-                >
-                  <FunnelSimple weight="regular" className="w-4 h-4 text-foreground" />
-                </button>
-              </div>
+              {/* Orders Table */}
+              <OrdersTableContent table={ordersTable} />
             </div>
-
-            {/* Filters Bar */}
-            {isFilterRowVisible && (
-              <div className="flex items-center gap-2 px-2 py-1.5 bg-white border-t border-border min-h-11">
-                <FilterGroup
-                  filters={patientFilterCategories}
-                  state={filterState}
-                  onChange={setFilterState}
-                  onClearAll={handleClearFilters}
-                />
-              </div>
-            )}
-          </div>
-
-          {/* Patients Table */}
-          <PatientsTableContent table={table} onPatientClick={handlePatientClick} />
-        </div>
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );

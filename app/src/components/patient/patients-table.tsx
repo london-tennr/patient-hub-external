@@ -14,10 +14,11 @@ import {
   type PaginationState,
   type SortingState,
 } from '@tanstack/react-table';
-import { CaretLeft, CaretRight, CaretUp, CaretDown, CheckCircle, WarningCircle, CircleNotch, Circle } from '@phosphor-icons/react';
+import { CaretLeft, CaretRight, CaretUp, CaretDown, CheckCircle, WarningCircle, CircleNotch, Circle, Copy, Check } from '@phosphor-icons/react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@tennr/lasso/table';
 import { Badge } from '@tennr/lasso/badge';
 import { cn } from '@tennr/lasso/utils/cn';
+import { Tooltip, TooltipTrigger, TooltipContent } from '@tennr/lasso/tooltip';
 import type { Patient, PatientPriority, PatientStage, PatientStatus } from '@/types/patient';
 
 const statusBadgeConfig: Record<PatientStatus, { label: string; variant: 'success' | 'warning' | 'destructive' | 'muted' | 'outline' | 'info' }> = {
@@ -105,6 +106,36 @@ const columnHelper = createColumnHelper<Patient>();
 
 export type OnFilterBy = (filterId: string, value: string) => void;
 
+function CopyableValue({ label, value }: { label: string; value: string }) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    navigator.clipboard.writeText(value);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  };
+
+  return (
+    <span
+      onClick={handleCopy}
+      className="relative inline-flex items-center cursor-pointer group hover:text-text-primary transition-colors"
+    >
+      {label} {value}
+      <span className={cn(
+        'absolute -right-0.5 top-1/2 -translate-y-1/2 flex items-center justify-center size-4 rounded-sm transition-opacity',
+        copied ? 'opacity-100 bg-white shadow-xs' : 'opacity-0 group-hover:opacity-100 group-hover:bg-white group-hover:shadow-xs'
+      )}>
+        {copied ? (
+          <Check weight="bold" className="size-3 text-[var(--green-9)]" />
+        ) : (
+          <Copy weight="regular" className="size-3 text-text-secondary" />
+        )}
+      </span>
+    </span>
+  );
+}
+
 function createColumns(onFilterBy?: OnFilterBy) {
   return [
     columnHelper.accessor((row) => `${row.firstName} ${row.lastName}`, {
@@ -115,21 +146,15 @@ function createColumns(onFilterBy?: OnFilterBy) {
         return (
           <div className="flex flex-col gap-0.5">
             <span className="font-medium">{info.getValue()}</span>
-            <span className="text-xs text-text-secondary">{formatDate(patient.dob)}</span>
+            <span className="text-xs text-text-secondary flex items-center gap-0.5 flex-wrap">
+              {formatDate(patient.dob)} ·{' '}
+              <CopyableValue label="MRN" value={patient.mrn} /> ·{' '}
+              <CopyableValue label="ID" value={patient.patientId} />
+            </span>
           </div>
         );
       },
       enableHiding: false,
-    }),
-    columnHelper.accessor('patientId', {
-      id: 'patientId',
-      header: 'Internal ID',
-      cell: (info) => <span className="text-sm text-text-secondary">{info.getValue()}</span>,
-    }),
-    columnHelper.accessor('mrn', {
-      id: 'mrn',
-      header: 'MRN',
-      cell: (info) => <span className="text-sm text-text-secondary">{info.getValue()}</span>,
     }),
     columnHelper.accessor('priority', {
       id: 'priority',
@@ -155,7 +180,10 @@ function createColumns(onFilterBy?: OnFilterBy) {
       cell: (info) => {
         const patient = info.row.original;
         const currentStageIndex = stageOrder.indexOf(info.getValue());
-        const isBlockedOrAttention = patient.status === 'blocked' || patient.status === 'needs_attention' || patient.status === 'missing_info';
+        const isBlocked = patient.status === 'blocked';
+        const isAttention = patient.status === 'needs_attention' || patient.status === 'missing_info';
+        const isBlockedOrAttention = isBlocked || isAttention;
+        const runningSet = new Set(patient.runningStages ?? []);
 
         return (
           <button
@@ -170,24 +198,54 @@ function createColumns(onFilterBy?: OnFilterBy) {
                 const isCompleted = i < currentStageIndex;
                 const isCurrent = i === currentStageIndex;
                 const isFuture = i > currentStageIndex;
+                const isRunning = isFuture && !isBlockedOrAttention && runningSet.has(stage);
+
+                const stageLabel = stageConfig[stage].label;
+                let tooltipText = stageLabel;
+                if (isCompleted) {
+                  tooltipText = `${stageLabel} — Completed`;
+                } else if (isCurrent && isBlocked) {
+                  tooltipText = `${stageLabel} — Blocked — awaiting resolution`;
+                } else if (isCurrent && isAttention) {
+                  const reason = patient.status === 'missing_info' ? 'Missing information required' : 'Needs attention';
+                  tooltipText = `${stageLabel} — ${reason}`;
+                } else if (isCurrent && !isBlockedOrAttention) {
+                  tooltipText = `${stageLabel} — Completed`;
+                } else if (isRunning) {
+                  tooltipText = `${stageLabel} — Runs are running`;
+                } else if (isFuture) {
+                  tooltipText = `${stageLabel} — Pending`;
+                }
 
                 return (
                   <div key={stage} className="flex items-center">
-                    {isCompleted && (
-                      <CheckCircle weight="fill" className="size-4 text-[var(--green-9)] shrink-0" />
-                    )}
-                    {isCurrent && isBlockedOrAttention && (
-                      <WarningCircle weight="fill" className="size-4 text-[var(--amber-9)] shrink-0" />
-                    )}
-                    {isCurrent && !isBlockedOrAttention && (
-                      <CheckCircle weight="fill" className="size-4 text-[var(--green-9)] shrink-0" />
-                    )}
-                    {isFuture && i === currentStageIndex + 1 && !isBlockedOrAttention && (
-                      <div className="size-4 shrink-0 rounded-full border-2 border-border-secondary border-t-text-tertiary animate-spin [animation-duration:3.5s]" />
-                    )}
-                    {isFuture && (i !== currentStageIndex + 1 || isBlockedOrAttention) && (
-                      <Circle weight="fill" className="size-4 text-border-secondary shrink-0" />
-                    )}
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span className="inline-flex">
+                          {isCompleted && (
+                            <CheckCircle weight="fill" className="size-4 text-[var(--green-9)] shrink-0" />
+                          )}
+                          {isCurrent && isBlocked && (
+                            <WarningCircle weight="fill" className="size-4 text-[#b44a3a] shrink-0" />
+                          )}
+                          {isCurrent && isAttention && (
+                            <WarningCircle weight="fill" className="size-4 text-[var(--amber-9)] shrink-0" />
+                          )}
+                          {isCurrent && !isBlockedOrAttention && (
+                            <CheckCircle weight="fill" className="size-4 text-[var(--green-9)] shrink-0" />
+                          )}
+                          {isRunning && (
+                            <div className="size-4 shrink-0 rounded-full border-2 border-border-secondary border-t-text-tertiary animate-spin [animation-duration:3.5s]" />
+                          )}
+                          {isFuture && !isRunning && (
+                            <Circle weight="fill" className="size-4 text-border-secondary shrink-0" />
+                          )}
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent side="top">
+                        {tooltipText}
+                      </TooltipContent>
+                    </Tooltip>
                     {i < stageOrder.length - 1 && (
                       <div className={cn(
                         'h-[2px] w-2',
@@ -198,16 +256,6 @@ function createColumns(onFilterBy?: OnFilterBy) {
                 );
               })}
             </div>
-            <span className={cn(
-              'text-xs mt-1 block',
-              isBlockedOrAttention
-                ? 'text-text-warning-primary'
-                : (patient.status === 'completed' || patient.status === 'on_track')
-                  ? 'text-text-success-primary'
-                  : 'text-text-secondary'
-            )}>
-              {stageConfig[info.getValue()].label}
-            </span>
           </button>
         );
       },
@@ -216,6 +264,7 @@ function createColumns(onFilterBy?: OnFilterBy) {
       id: 'lastUpdated',
       header: 'Last updated',
       cell: (info) => formatLastUpdated(info.getValue()),
+      size: 120,
     }),
   ];
 }
@@ -465,6 +514,7 @@ export function PatientsTableContent({ table, onPatientClick }: PatientsTableCon
                 return (
                   <TableHead
                     key={header.id}
+                    style={header.column.columnDef.size !== 150 ? { width: header.getSize() } : undefined}
                     className={cn(
                       'text-muted-foreground font-medium h-full',
                       canSort && 'cursor-pointer select-none hover:text-foreground transition-colors'
@@ -511,7 +561,7 @@ export function PatientsTableContent({ table, onPatientClick }: PatientsTableCon
               className="cursor-pointer h-[52px] border-b border-border hover:bg-accent/50 transition-colors"
             >
               {row.getVisibleCells().map((cell) => (
-                <TableCell key={cell.id} className="text-foreground">
+                <TableCell key={cell.id} style={cell.column.columnDef.size !== 150 ? { width: cell.column.getSize() } : undefined} className="text-foreground">
                   {flexRender(cell.column.columnDef.cell, cell.getContext())}
                 </TableCell>
               ))}

@@ -45,6 +45,7 @@ export interface Patient {
   status: PatientStatus;
   priority: PatientPriority;
   stage: PatientStage;
+  runningStages?: PatientStage[];
   tennrStatus: 'in_queue' | 'processing' | 'completed' | 'idle';
   syncStatus: {
     ehrSystem: 'BrightTree' | 'WeInfuse' | 'Niko';

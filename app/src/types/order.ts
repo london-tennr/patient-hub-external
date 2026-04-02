@@ -1,5 +1,6 @@
 export type OrderStage = 'validation' | 'eligibility' | 'qualification' | 'complete';
 export type OrderSubStatus = 'in_progress' | 'blocked' | 'awaiting_response' | 'completed';
+export type OrderStatus = 'on_track' | 'missing_info' | 'rejected' | 'completed';
 
 export interface OrderLineItem {
   id: string;
@@ -17,8 +18,12 @@ export interface Order {
   orderName: string;
   orderType: string;
   items: OrderLineItem[];
+  patientDob: string;
+  status: OrderStatus;
   stage: OrderStage;
   subStatus: OrderSubStatus;
+  statusUpdated: string;
+  orderAge: string;
   referringPractitioner: string | null;
   referringFacility: string | null;
   dateCreated: string;

@@ -1,0 +1,12 @@
+{
+  "name": "admin-visualizer",
+  "private": true,
+  "scripts": {
+    "dev": "pnpm --filter app dev",
+    "build": "pnpm --filter @tennr/lasso build && pnpm --filter app build",
+    "lint": "pnpm --filter app lint"
+  },
+  "devDependencies": {
+    "next": "16.0.8"
+  }
+}

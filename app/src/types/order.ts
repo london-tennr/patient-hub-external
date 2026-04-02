@@ -1,0 +1,44 @@
+export type OrderStage = 'validation' | 'eligibility' | 'qualification' | 'complete';
+export type OrderSubStatus = 'in_progress' | 'blocked' | 'awaiting_response' | 'completed';
+
+export interface OrderLineItem {
+  id: string;
+  description: string;
+  hcpcsCode: string;
+  product: string;
+  quantity: number;
+}
+
+export interface Order {
+  id: string;
+  externalOrderId: string;
+  patientId: string;
+  patientName: string;
+  orderName: string;
+  orderType: string;
+  items: OrderLineItem[];
+  stage: OrderStage;
+  subStatus: OrderSubStatus;
+  referringPractitioner: string | null;
+  referringFacility: string | null;
+  dateCreated: string;
+  lastUpdated: string;
+  documents: OrderDocument[];
+  notes: OrderNote[];
+}
+
+export interface OrderDocument {
+  id: string;
+  name: string;
+  type: 'sleep_study' | 'prior_auth' | 'cmn' | 'other';
+  dateAdded: string;
+  source: 'ehr' | 'tennr' | 'bright_tree';
+  url: string;
+}
+
+export interface OrderNote {
+  id: string;
+  content: string;
+  author: string;
+  createdAt: string;
+}

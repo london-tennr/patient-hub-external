@@ -7,8 +7,12 @@ const mockOrders: Order[] = [
     externalOrderId: 'ClH6A0xTUYS-bgJa',
     patientId: '1',
     patientName: 'John Smith',
+    patientDob: '1985-03-15',
     orderName: 'CGM & Supplies',
     orderType: 'DME',
+    status: 'on_track',
+    statusUpdated: '2026-01-19',
+    orderAge: '9 days',
     items: [
       {
         id: 'LI001',
@@ -33,8 +37,12 @@ const mockOrders: Order[] = [
     externalOrderId: 'Xk9B2mWqR7Lp-dNfE',
     patientId: '1',
     patientName: 'John Smith',
+    patientDob: '1985-03-15',
     orderName: 'CPAP Equipment',
     orderType: 'DME',
+    status: 'missing_info',
+    statusUpdated: '2026-01-18',
+    orderAge: '5 days',
     items: [
       {
         id: 'LI002',
@@ -67,8 +75,12 @@ const mockOrders: Order[] = [
     externalOrderId: 'Qw3F8nVtM1Hy-jKsR',
     patientId: '1',
     patientName: 'John Smith',
+    patientDob: '1985-03-15',
     orderName: 'Nebulizer Supplies',
     orderType: 'DME',
+    status: 'completed',
+    statusUpdated: '2026-01-05',
+    orderAge: '35 days',
     items: [
       {
         id: 'LI004',

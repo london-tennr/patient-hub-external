@@ -223,7 +223,7 @@ export default function PatientsPage() {
           return prev.map((f) => (f.filterId === filterId ? { ...f, value: [...arr, value] } : f));
         }
         // Create new filter with this value
-        return [...prev, { filterId, value: [value] }];
+        return [...prev, { id: crypto.randomUUID(), filterId, value: [value] }];
       }
 
       // For command (single-value) filters
@@ -233,7 +233,7 @@ export default function PatientsPage() {
       if (existing) {
         return prev.map((f) => (f.filterId === filterId ? { ...f, value } : f));
       }
-      return [...prev, { filterId, value }];
+      return [...prev, { id: crypto.randomUUID(), filterId, value }];
     });
   }, []);
 

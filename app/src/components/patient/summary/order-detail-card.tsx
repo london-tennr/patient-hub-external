@@ -157,8 +157,7 @@ export function OrderDetailCard({ orders }: OrderDetailCardProps) {
 
           <TabsContent value="processing" className="mt-4 pb-4">
             <OrderStageProgress order={order} />
-            <div className="flex items-center justify-between mt-4">
-              <Button variant="outline" size="sm">Change status</Button>
+            <div className="flex items-center justify-end mt-4">
               <div className="flex items-center gap-1.5 text-sm text-text-secondary">
                 <Clock weight="regular" className="size-4" />
                 Updated {formatTimeAgo(order.lastUpdated)}

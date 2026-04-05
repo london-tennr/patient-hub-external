@@ -41,6 +41,7 @@ const mockPatient: Patient = {
   priority: 'p3',
   stage: 'insurance_verification',
   tennrStatus: 'processing',
+  referralDate: '2026-03-15T10:00:00Z',
   syncStatus: { ehrSystem: 'BrightTree', lastSynced: '2026-01-21T09:15:00Z' },
 };
 
@@ -50,12 +51,6 @@ export default function DemographicsPage({
   params: Promise<{ id: string }>;
 }) {
   const { id: _id } = use(params);
-  // TODO: Use _id to fetch patient demographics from API
-  const handleSave = async (data: Partial<Patient>) => {
-    // TODO: Save to API and sync to EHR
-    console.log('Saving demographics:', data);
-    await new Promise(resolve => setTimeout(resolve, 1000));
-  };
 
-  return <DemographicsForm patient={mockPatient} onSave={handleSave} />;
+  return <DemographicsForm patient={mockPatient} />;
 }

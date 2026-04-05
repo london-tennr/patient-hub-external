@@ -42,30 +42,16 @@ export default function InsurancePage({
   params: Promise<{ id: string }>;
 }) {
   const { id: _id } = use(params);
-  // TODO: Use _id to fetch insurance from API
-  const handleSavePrimary = async (insurance: Insurance) => {
-    // TODO: Save to API
-    console.log('Saving primary insurance:', insurance);
-    await new Promise(resolve => setTimeout(resolve, 1000));
-  };
-
-  const handleSaveSecondary = async (insurance: Insurance) => {
-    // TODO: Save to API
-    console.log('Saving secondary insurance:', insurance);
-    await new Promise(resolve => setTimeout(resolve, 1000));
-  };
 
   return (
     <div className="space-y-6">
       <InsuranceForm
         insurance={mockPrimaryInsurance}
         title="Primary Insurance"
-        onSave={handleSavePrimary}
       />
       <InsuranceForm
         insurance={undefined}
         title="Secondary Insurance"
-        onSave={handleSaveSecondary}
       />
       <VerificationHistory history={mockVerificationHistory} />
     </div>

@@ -1,7 +1,6 @@
 'use client';
 
 import { Phone, ChatCircleDots, EnvelopeSimple, FileText } from '@phosphor-icons/react';
-import { Button } from '@tennr/lasso/button';
 
 interface EngagementChannel {
   id: string;
@@ -11,15 +10,16 @@ interface EngagementChannel {
 }
 
 interface EngagementCardProps {
+  phone?: string;
   channels?: EngagementChannel[];
   lastContactDaysAgo?: number;
 }
 
-const channelConfig: Record<EngagementChannel['type'], { label: string; icon: typeof Phone; iconBg: string; iconColor: string }> = {
-  phone: { label: 'Phone', icon: Phone, iconBg: 'bg-bg-secondary', iconColor: 'text-icon-primary' },
-  sms: { label: 'SMS', icon: ChatCircleDots, iconBg: 'bg-bg-secondary', iconColor: 'text-icon-primary' },
-  email: { label: 'Email', icon: EnvelopeSimple, iconBg: 'bg-bg-secondary', iconColor: 'text-icon-primary' },
-  fax: { label: 'Fax', icon: FileText, iconBg: 'bg-bg-secondary', iconColor: 'text-icon-primary' },
+const channelConfig: Record<EngagementChannel['type'], { label: string; icon: typeof Phone }> = {
+  phone: { label: 'Phone', icon: Phone },
+  sms: { label: 'SMS', icon: ChatCircleDots },
+  email: { label: 'Email', icon: EnvelopeSimple },
+  fax: { label: 'Fax', icon: FileText },
 };
 
 const mockChannels: EngagementChannel[] = [
@@ -30,23 +30,24 @@ const mockChannels: EngagementChannel[] = [
 ];
 
 export function EngagementCard({
+  phone,
   channels = mockChannels,
   lastContactDaysAgo = 6,
 }: EngagementCardProps) {
   return (
     <div className="bg-bg-white border border-border-tertiary rounded-md shadow-xs overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3">
-          <p className="text-base font-medium lasso:wght-medium leading-6 text-text-primary">
+        <div className="flex items-center justify-between px-4 py-2">
+          <p className="text-sm font-medium lasso:wght-medium text-text-primary">
             Engagement
           </p>
-          <span className="text-sm text-text-secondary">
-            Last contact: {lastContactDaysAgo}d ago
-          </span>
+          {phone && (
+            <span className="text-[11px] text-text-tertiary">{phone}</span>
+          )}
         </div>
 
         {/* Channel Rows */}
-        <div>
+        <div className="border-t border-border-tertiary px-4 pt-2 pb-1.5">
           {channels.map(channel => {
             const config = channelConfig[channel.type];
             const Icon = config.icon;
@@ -56,35 +57,26 @@ export function EngagementCard({
             return (
               <div
                 key={channel.id}
-                className="flex items-center gap-3 px-4 py-3 border-t border-border-secondary"
+                className="flex items-center gap-2.5 py-1.5"
               >
                 {/* Icon */}
-                <div className={`flex items-center justify-center size-9 rounded-md ${config.iconBg} shrink-0`}>
-                  <Icon weight="regular" className={`size-4.5 ${config.iconColor}`} />
+                <div className="size-5 rounded-full border border-border-secondary flex items-center justify-center bg-bg-white shrink-0">
+                  <Icon weight="regular" className="size-3 text-text-tertiary" />
                 </div>
 
                 {/* Info */}
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium lasso:wght-medium text-text-primary">{config.label}</p>
-                  <p className="text-xs text-text-secondary">{channel.summary}</p>
+                  <span className="text-[13px] font-medium lasso:wght-medium text-text-primary">{config.label}</span>
+                  <span className="text-[11px] text-text-tertiary ml-1.5">{channel.summary}</span>
                 </div>
 
                 {/* Date */}
-                <span className="text-sm text-text-secondary shrink-0">{dateStr}</span>
+                <span className="text-[11px] text-text-tertiary shrink-0">{dateStr}</span>
               </div>
             );
           })}
         </div>
 
-        {/* Footer */}
-        <div className="flex items-center justify-between px-4 py-2.5 border-t border-border-tertiary">
-          <span className="text-sm text-text-secondary">
-            {channels.length} channels active
-          </span>
-          <Button variant="outline" size="sm">
-            Contact Patient
-          </Button>
-        </div>
       </div>
   );
 }

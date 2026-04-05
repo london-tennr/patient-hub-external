@@ -60,12 +60,7 @@ export function Sidebar({ collapsed = false, onCollapsedChange }: SidebarProps) 
       label: 'Main',
       items: [
         {
-          label: 'Explore',
-          href: '/patients',
-          icon: Users,
-        },
-        {
-          label: 'Explore MVP',
+          label: 'Patient Hub',
           href: '/explore',
           icon: Users,
         },
@@ -77,7 +72,7 @@ export function Sidebar({ collapsed = false, onCollapsedChange }: SidebarProps) 
     if (item.href === '/') {
       return pathname === '/';
     }
-    return pathname.startsWith(item.href);
+    return pathname === item.href || pathname.startsWith(item.href + '/');
   };
 
   return (

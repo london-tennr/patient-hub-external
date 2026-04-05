@@ -1,10 +1,11 @@
 'use client';
 
-import { useState } from 'react';
-import { Heartbeat, FolderOpen, FileText, CheckCircle, ShieldCheck, Clock, Hash, ArrowSquareOut } from '@phosphor-icons/react';
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@tennr/lasso/sheet';
+import { useState, useMemo } from 'react';
+import { Heartbeat, FolderOpen, FileText, CheckCircle, ShieldCheck, FunnelSimple, X, MagnifyingGlass } from '@phosphor-icons/react';
 import { Badge } from '@tennr/lasso/badge';
 import { cn } from '@tennr/lasso/utils/cn';
+
+export type ActivitySource = 'tennr' | 'user' | 'system';
 
 interface TimelineActivity {
   id: string;
@@ -12,6 +13,7 @@ interface TimelineActivity {
   title: string;
   description?: string;
   orderId?: string;
+  source?: ActivitySource;
   author?: {
     name: string;
     initials: string;
@@ -19,9 +21,16 @@ interface TimelineActivity {
   timestamp: string;
 }
 
+const sourceConfig: Record<ActivitySource, { label: string }> = {
+  tennr: { label: 'Tennr' },
+  user: { label: 'User' },
+  system: { label: 'System' },
+};
+
 interface TimelineProps {
   activities: TimelineActivity[];
   onAddComment?: (comment: string) => void;
+  onSelectActivity?: (activity: TimelineActivity) => void;
   className?: string;
 }
 
@@ -34,200 +43,51 @@ const activityIcon: Record<TimelineActivity['type'], React.ReactNode> = {
   comment: <FileText weight="regular" className="size-4 text-text-tertiary" />,
 };
 
-const activityDrawerIcon: Record<TimelineActivity['type'], React.ReactNode> = {
-  verification: <Heartbeat weight="regular" className="size-5 text-text-tertiary" />,
-  document: <FolderOpen weight="regular" className="size-5 text-text-tertiary" />,
-  referral: <FileText weight="regular" className="size-5 text-text-tertiary" />,
-  order_complete: <CheckCircle weight="regular" className="size-5 text-text-success-primary" />,
-  prior_auth: <ShieldCheck weight="regular" className="size-5 text-text-tertiary" />,
-  comment: <FileText weight="regular" className="size-5 text-text-tertiary" />,
-};
+const allSources: ActivitySource[] = ['tennr', 'user', 'system'];
 
-const activityTypeLabel: Record<TimelineActivity['type'], string> = {
-  verification: 'Insurance Verification',
-  document: 'Document Upload',
-  referral: 'Referral',
-  order_complete: 'Order Completion',
-  prior_auth: 'Prior Authorization',
-  comment: 'Comment',
-};
-
-const activityTypeBadgeVariant: Record<TimelineActivity['type'], 'success' | 'warning' | 'outline' | 'default'> = {
-  verification: 'warning',
-  document: 'outline',
-  referral: 'outline',
-  order_complete: 'success',
-  prior_auth: 'default',
-  comment: 'outline',
-};
-
-interface DetailField {
-  label: string;
-  value: string;
-  href?: string;
+function formatOrderId(orderId: string): string {
+  return orderId.replace(/^ORD-/i, 'Order ');
 }
 
-const activityDetails: Record<TimelineActivity['type'], { description: string; fields: DetailField[] }> = {
-  verification: {
-    description: 'An automated insurance verification check was initiated to confirm patient eligibility and benefits coverage with the carrier on file.',
-    fields: [
-      { label: 'Carrier', value: 'Aetna', href: 'https://ehr.example.com/payers/aetna' },
-      { label: 'Plan Type', value: 'PPO' },
-      { label: 'Verification Method', value: 'Electronic (270/271)' },
-      { label: 'Initiated By', value: 'System — Auto Trigger' },
-    ],
-  },
-  document: {
-    description: 'A document was uploaded and attached to the patient record. The document has been processed and is available for review.',
-    fields: [
-      { label: 'Document Type', value: 'Insurance Card' },
-      { label: 'Uploaded By', value: 'Patient Portal' },
-      { label: 'File Format', value: 'PDF' },
-      { label: 'Pages', value: '2' },
-    ],
-  },
-  referral: {
-    description: 'A referral was received from an external provider. The referral has been matched to the patient record and linked to the relevant order.',
-    fields: [
-      { label: 'Referring Provider', value: 'PresNow Urgent Care' },
-      { label: 'Provider NPI', value: '1234567890' },
-      { label: 'Referral Type', value: 'DME Referral' },
-      { label: 'Received Via', value: 'eFax' },
-    ],
-  },
-  order_complete: {
-    description: 'The order has been fully processed and a claim has been submitted to the payer for reimbursement.',
-    fields: [
-      { label: 'Claim Number', value: 'CLM-2026-04821' },
-      { label: 'Submitted To', value: 'Aetna', href: 'https://ehr.example.com/payers/aetna' },
-      { label: 'Total Billed', value: '$1,247.00' },
-      { label: 'Expected Reimbursement', value: '$998.40' },
-    ],
-  },
-  prior_auth: {
-    description: 'A prior authorization request was processed with the insurance carrier. This step is required before the order can proceed to fulfillment.',
-    fields: [
-      { label: 'Auth Number', value: 'PA-2026-38291' },
-      { label: 'Carrier', value: 'Aetna', href: 'https://ehr.example.com/payers/aetna' },
-      { label: 'Decision', value: 'Approved' },
-      { label: 'Valid Through', value: '07/01/2026' },
-    ],
-  },
-  comment: {
-    description: 'A comment was added to the patient record.',
-    fields: [],
-  },
-};
+function getSourceLabel(activity: TimelineActivity): string {
+  if (activity.author?.name) return activity.author.name;
+  if (activity.source) return sourceConfig[activity.source].label;
+  return '';
+}
 
-function ActivityDetailDrawer({ activity, open, onClose }: { activity: TimelineActivity | null; open: boolean; onClose: () => void }) {
-  if (!activity) return null;
+export function Timeline({ activities, onSelectActivity, className }: TimelineProps) {
+  const [sourceFilters, setSourceFilters] = useState<Set<ActivitySource>>(new Set());
+  const [showFilters, setShowFilters] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
-  const details = activityDetails[activity.type];
-  const typeLabel = activityTypeLabel[activity.type];
-  const badgeVariant = activityTypeBadgeVariant[activity.type];
+  const hasActiveFilters = sourceFilters.size > 0;
 
-  const formatFullTimestamp = (isoString: string) => {
-    const date = new Date(isoString);
-    return date.toLocaleDateString('en-US', {
-      weekday: 'long',
-      month: 'long',
-      day: 'numeric',
-      year: 'numeric',
-    }) + ' at ' + date.toLocaleTimeString('en-US', {
-      hour: 'numeric',
-      minute: '2-digit',
-      hour12: true,
+  const filteredActivities = useMemo(() => {
+    return activities.filter(a => {
+      if (sourceFilters.size > 0 && (!a.source || !sourceFilters.has(a.source))) return false;
+      if (searchQuery) {
+        const q = searchQuery.toLowerCase();
+        const matchesTitle = a.title.toLowerCase().includes(q);
+        const matchesOrder = a.orderId?.toLowerCase().includes(q);
+        const matchesAuthor = a.author?.name.toLowerCase().includes(q);
+        if (!matchesTitle && !matchesOrder && !matchesAuthor) return false;
+      }
+      return true;
+    });
+  }, [activities, sourceFilters, searchQuery]);
+
+  const toggleSource = (source: ActivitySource) => {
+    setSourceFilters(prev => {
+      const next = new Set(prev);
+      if (next.has(source)) next.delete(source);
+      else next.add(source);
+      return next;
     });
   };
 
-  return (
-    <Sheet open={open} onOpenChange={v => { if (!v) onClose(); }}>
-      <SheetContent className="w-[440px] sm:w-[440px] p-0 overflow-y-auto">
-        {/* Hero */}
-        <div className="bg-bg-secondary px-6 pt-6 pb-5">
-          <SheetHeader className="p-0">
-            <div className="flex items-center gap-2.5">
-              <div className="size-9 rounded-full border border-border-secondary flex items-center justify-center bg-bg-white">
-                {activityDrawerIcon[activity.type]}
-              </div>
-              <div className="flex flex-col gap-0.5">
-                <SheetTitle className="text-lg leading-tight">{activity.title}</SheetTitle>
-                <Badge variant={badgeVariant} className="w-fit">{typeLabel}</Badge>
-              </div>
-            </div>
-          </SheetHeader>
-        </div>
-
-        {/* Details */}
-        <div className="px-6 py-5 flex flex-col gap-5">
-          {/* Timestamp & Order */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="flex flex-col gap-1">
-              <div className="flex items-center gap-1.5">
-                <Clock weight="regular" className="size-3.5 text-text-tertiary" />
-                <span className="text-xs text-text-tertiary uppercase tracking-wide">Date & Time</span>
-              </div>
-              <span className="text-sm text-text-primary">{formatFullTimestamp(activity.timestamp)}</span>
-            </div>
-            {activity.orderId && (
-              <div className="flex flex-col gap-1">
-                <div className="flex items-center gap-1.5">
-                  <Hash weight="regular" className="size-3.5 text-text-tertiary" />
-                  <span className="text-xs text-text-tertiary uppercase tracking-wide">Order</span>
-                </div>
-                <span className="text-sm text-text-primary font-mono">{activity.orderId}</span>
-              </div>
-            )}
-          </div>
-
-          <div className="border-t border-border-secondary" />
-
-          {/* Description */}
-          <div>
-            <span className="text-xs text-text-tertiary uppercase tracking-wide">Description</span>
-            <p className="text-sm text-text-secondary mt-1.5 leading-relaxed">{details.description}</p>
-          </div>
-
-          {/* Detail fields */}
-          {details.fields.length > 0 && (
-            <>
-              <div className="border-t border-border-secondary" />
-              <div>
-                <span className="text-xs text-text-tertiary uppercase tracking-wide">Details</span>
-                <div className="mt-2 bg-bg-secondary rounded-md border border-border-secondary">
-                  {details.fields.map((field, i) => (
-                    <div key={field.label} className={cn(
-                      "flex items-center justify-between px-3 py-2.5",
-                      i > 0 && "border-t border-border-secondary"
-                    )}>
-                      <span className="text-sm text-text-secondary">{field.label}</span>
-                      {field.href ? (
-                        <a
-                          href={field.href}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1 text-sm font-medium lasso:wght-medium text-text-info-primary hover:underline"
-                        >
-                          {field.value}
-                          <ArrowSquareOut weight="regular" className="size-3.5" />
-                        </a>
-                      ) : (
-                        <span className="text-sm font-medium lasso:wght-medium text-text-primary">{field.value}</span>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </>
-          )}
-        </div>
-      </SheetContent>
-    </Sheet>
-  );
-}
-
-export function Timeline({ activities, className }: TimelineProps) {
-  const [selectedActivity, setSelectedActivity] = useState<TimelineActivity | null>(null);
+  const clearFilters = () => {
+    setSourceFilters(new Set());
+  };
 
   const formatTimestamp = (isoString: string) => {
     const date = new Date(isoString);
@@ -243,22 +103,96 @@ export function Timeline({ activities, className }: TimelineProps) {
   };
 
   return (
-    <>
       <div className={cn("bg-white border border-[#efede9] rounded-md shadow-[0px_1px_2px_0px_rgba(0,0,0,0.05)] overflow-hidden flex flex-col", className)}>
         {/* Header */}
-        <div className="px-4 py-2 shrink-0">
+        <div className="px-4 py-2 shrink-0 flex items-center justify-between">
           <div className="text-base font-medium lasso:wght-medium leading-6 text-foreground">Patient Activity Timeline</div>
+          <button
+            onClick={() => setShowFilters(prev => !prev)}
+            className={cn(
+              "flex items-center gap-1.5 text-xs px-2 py-1 rounded-md transition-colors cursor-pointer",
+              showFilters || hasActiveFilters
+                ? "bg-bg-secondary text-text-primary"
+                : "text-text-tertiary hover:text-text-secondary hover:bg-bg-primary-hover"
+            )}
+          >
+            <FunnelSimple weight="regular" className="size-3.5" />
+            Filter
+            {hasActiveFilters && (
+              <span className="bg-bg-black-solid text-text-white text-[10px] rounded-full size-4 flex items-center justify-center leading-none">
+                {sourceFilters.size}
+              </span>
+            )}
+          </button>
         </div>
+
+        {/* Search */}
+        <div className="px-4 pb-2">
+          <div className="relative">
+            <MagnifyingGlass weight="regular" className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-text-tertiary" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search activities..."
+              className="w-full pl-8 pr-3 py-1.5 text-xs rounded-md border border-border-secondary bg-bg-primary text-text-primary placeholder:text-text-placeholder focus:outline-none focus:ring-1 focus:ring-border-focus-ring"
+            />
+          </div>
+        </div>
+
+        {/* Filter Bar */}
+        {showFilters && (
+          <div className="px-4 pb-3 flex flex-col gap-2">
+            {/* Source filters */}
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <span className="text-[10px] text-text-tertiary uppercase tracking-wide mr-1">Source</span>
+              {allSources.map(source => (
+                <button
+                  key={source}
+                  onClick={() => toggleSource(source)}
+                  className="cursor-pointer"
+                >
+                  <Badge
+                    variant="outline"
+                    className={cn(
+                      "text-[10px] px-1.5 py-0 h-5 leading-none transition-opacity",
+                      sourceFilters.has(source) && "bg-bg-secondary",
+                      sourceFilters.size > 0 && !sourceFilters.has(source) && "opacity-50"
+                    )}
+                  >
+                    {sourceConfig[source].label}
+                  </Badge>
+                </button>
+              ))}
+            </div>
+            {/* Clear */}
+            {hasActiveFilters && (
+              <button
+                onClick={clearFilters}
+                className="flex items-center gap-1 text-[10px] text-text-tertiary hover:text-text-primary transition-colors self-start cursor-pointer"
+              >
+                <X weight="regular" className="size-3" />
+                Clear filters
+              </button>
+            )}
+          </div>
+        )}
 
         {/* Timeline Events */}
         <div className="flex flex-col border-t border-border-tertiary pt-3.5 pb-3.5 overflow-y-auto min-h-0">
-          {activities.map((activity, index) => {
-            const isLast = index === activities.length - 1;
+          {filteredActivities.length === 0 && (
+            <div className="px-4 py-6 text-center text-sm text-text-tertiary">
+              {searchQuery ? 'No activities match your search.' : 'No activities match the selected filters.'}
+            </div>
+          )}
+          {filteredActivities.map((activity, index) => {
+            const isLast = index === filteredActivities.length - 1;
+            const label = getSourceLabel(activity);
 
             return (
               <button
                 key={activity.id}
-                onClick={() => setSelectedActivity(activity)}
+                onClick={() => onSelectActivity?.(activity)}
                 className="flex gap-3 px-4 text-left hover:bg-bg-primary-hover transition-colors cursor-pointer"
               >
                 {/* Icon Column with Connector Line */}
@@ -279,10 +213,17 @@ export function Timeline({ activities, className }: TimelineProps) {
                   <span className="text-sm font-medium lasso:wght-medium text-text-primary">
                     {activity.title}
                   </span>
-                  <span className="text-xs text-text-tertiary">
-                    {formatTimestamp(activity.timestamp)}
-                    {activity.orderId && (
-                      <> &middot; <span className="font-mono">{activity.orderId}</span></>
+                  <span className="text-xs text-text-tertiary flex items-center gap-1.5 flex-wrap">
+                    <span>
+                      {formatTimestamp(activity.timestamp)}
+                      {activity.orderId && (
+                        <> &middot; <span className="font-mono">{formatOrderId(activity.orderId)}</span></>
+                      )}
+                    </span>
+                    {label && (
+                      <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 leading-none">
+                        {label}
+                      </Badge>
                     )}
                   </span>
                 </div>
@@ -291,12 +232,5 @@ export function Timeline({ activities, className }: TimelineProps) {
           })}
         </div>
       </div>
-
-      <ActivityDetailDrawer
-        activity={selectedActivity}
-        open={!!selectedActivity}
-        onClose={() => setSelectedActivity(null)}
-      />
-    </>
   );
 }

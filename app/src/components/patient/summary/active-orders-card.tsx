@@ -1,19 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import Link from 'next/link';
 import { CaretDown, CaretLeft, CaretRight, Tag, CheckCircle, WarningCircle, Circle } from '@phosphor-icons/react';
 import { Badge } from '@tennr/lasso/badge';
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@tennr/lasso/sheet';
 import { cn } from '@tennr/lasso/utils/cn';
 import type { Order, OrderStage, OrderStatus } from '@/types/order';
-
-const statusBadgeConfig: Record<OrderStatus, { label: string; variant: 'success' | 'warning' | 'destructive' | 'outline' }> = {
-  on_track: { label: 'On Track', variant: 'success' },
-  missing_info: { label: 'Missing Info', variant: 'warning' },
-  rejected: { label: 'Rejected', variant: 'destructive' },
-  completed: { label: 'Completed', variant: 'outline' },
-};
 
 const orderIllustrations: Record<string, React.ReactNode> = {
   aerosol_mask: (
@@ -38,19 +29,30 @@ function getOrderIllustration(orderName: string): React.ReactNode | null {
   return null;
 }
 
+export const statusBadgeConfig: Record<OrderStatus, { label: string; variant: 'success' | 'warning' | 'destructive' | 'outline' }> = {
+  on_track: { label: 'On Track', variant: 'success' },
+  missing_info: { label: 'Missing Info', variant: 'warning' },
+  rejected: { label: 'Rejected', variant: 'destructive' },
+  completed: { label: 'Completed', variant: 'outline' },
+};
+
+
 interface ActiveOrdersCardProps {
   patientId: string;
   orders: Order[];
+  onSelectOrder?: (order: Order) => void;
+  onViewAll?: () => void;
+  hideIllustrations?: boolean;
 }
 
-function OrderCard({ order, onSelect }: { order: Order; onSelect: (order: Order) => void }) {
+export function OrderCard({ order, onSelect, hideIllustrations }: { order: Order; onSelect: (order: Order) => void; hideIllustrations?: boolean }) {
   const statusConfig = statusBadgeConfig[order.status];
-  const illustration = getOrderIllustration(order.orderName);
+  const illustration = hideIllustrations ? null : getOrderIllustration(order.orderName);
 
   return (
     <button
       onClick={() => onSelect(order)}
-      className="bg-bg-white border border-border-secondary rounded-md overflow-hidden flex flex-col hover:bg-bg-primary-hover transition-colors text-left cursor-pointer"
+      className="bg-bg-white rounded-md shadow-[0_1px_4px_rgba(0,0,0,0.12)] overflow-hidden flex flex-col hover:shadow-[0_2px_8px_rgba(0,0,0,0.16)] transition-shadow text-left cursor-pointer"
     >
       {/* Illustration */}
       {illustration && (
@@ -64,9 +66,11 @@ function OrderCard({ order, onSelect }: { order: Order; onSelect: (order: Order)
         <div className="flex flex-col gap-1 min-w-0">
           <div className="flex items-center gap-2">
             <span className="text-sm font-medium lasso:wght-medium text-text-primary">{order.orderName}</span>
-            <Badge variant={statusConfig.variant} className="text-xs">
-              {statusConfig.label}
-            </Badge>
+            {order.status !== 'completed' && (
+              <Badge variant={statusConfig.variant} className="text-xs">
+                {statusConfig.label}
+              </Badge>
+            )}
           </div>
           <span className="text-xs text-text-tertiary truncate">ID: {order.externalOrderId}</span>
         </div>
@@ -104,7 +108,7 @@ const stageNotes: Partial<Record<OrderStage, StageNote>> = {
   eligibility: { message: 'Awaiting carrier response for benefits', actionLabel: 'Follow Up' },
 };
 
-function OrderProgressStepper({ order }: { order: Order }) {
+export function OrderProgressStepper({ order }: { order: Order }) {
   const currentIndex = getStageIndex(order.stage);
   const note = order.status === 'missing_info' ? stageNotes[order.stage] : undefined;
 
@@ -167,118 +171,6 @@ function OrderProgressStepper({ order }: { order: Order }) {
   );
 }
 
-function OrderDetailDrawer({ order, open, onClose }: { order: Order | null; open: boolean; onClose: () => void }) {
-  if (!order) return null;
-
-  const statusConfig = statusBadgeConfig[order.status];
-  const illustration = getOrderIllustration(order.orderName);
-
-  return (
-    <Sheet open={open} onOpenChange={v => { if (!v) onClose(); }}>
-      <SheetContent className="w-[440px] sm:w-[440px] p-0 overflow-y-auto">
-        {/* Hero section with illustration */}
-        <div className="bg-bg-secondary px-6 pt-6 pb-5">
-          <SheetHeader className="p-0">
-            <div className="flex items-center gap-2.5">
-              <SheetTitle className="text-lg">{order.orderName}</SheetTitle>
-              <Badge variant={statusConfig.variant}>{statusConfig.label}</Badge>
-            </div>
-            <p className="text-xs text-text-tertiary font-mono mt-1">ID: {order.externalOrderId}</p>
-          </SheetHeader>
-
-          {illustration && (
-            <div className="flex items-center justify-center mt-4">
-              {illustration}
-            </div>
-          )}
-        </div>
-
-        {/* Details */}
-        <div className="px-6 py-5 flex flex-col gap-5">
-          {/* Order info row */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="flex flex-col gap-0.5">
-              <span className="text-xs text-text-tertiary uppercase tracking-wide">Type</span>
-              <span className="text-sm text-text-primary">{order.orderType}</span>
-            </div>
-            <div className="flex flex-col gap-0.5">
-              <span className="text-xs text-text-tertiary uppercase tracking-wide">Stage</span>
-              <span className="text-sm text-text-primary capitalize">{order.stage}</span>
-            </div>
-          </div>
-
-          {/* Divider */}
-          <div className="border-t border-border-secondary" />
-
-          {/* Order Progress */}
-          <div>
-            <span className="text-xs text-text-tertiary uppercase tracking-wide">Order Progress</span>
-            <div className="mt-2">
-              <OrderProgressStepper order={order} />
-            </div>
-          </div>
-
-          {/* Divider */}
-          <div className="border-t border-border-secondary" />
-
-          {/* Items */}
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-xs text-text-tertiary uppercase tracking-wide">Items</span>
-              <span className="text-xs text-text-tertiary uppercase tracking-wide">Qty</span>
-            </div>
-            <div className="bg-bg-secondary rounded-md border border-border-secondary">
-              {order.items.map((item, i) => (
-                <div key={item.id} className={cn(
-                  "flex items-start gap-2.5 px-3 py-3",
-                  i > 0 && "border-t border-border-secondary"
-                )}>
-                  <Tag weight="regular" className="size-4 text-text-tertiary shrink-0 mt-0.5" />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm text-text-primary leading-5">{item.description}</p>
-                    <p className="text-xs text-text-tertiary mt-0.5">{item.hcpcsCode} &bull; {item.product}</p>
-                  </div>
-                  <span className="text-sm font-medium lasso:wght-medium text-text-primary shrink-0">{item.quantity}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Divider */}
-          <div className="border-t border-border-secondary" />
-
-          {/* Referring Practitioner */}
-          <div>
-            <span className="text-xs text-text-tertiary uppercase tracking-wide">Referring Practitioner</span>
-            <div className="flex items-center justify-between px-3 py-2.5 mt-2 bg-bg-white border border-border-secondary rounded-md hover:border-border-primary transition-colors cursor-pointer">
-              <span className={cn(
-                'text-sm',
-                order.referringPractitioner ? 'text-text-primary' : 'text-text-placeholder'
-              )}>
-                {order.referringPractitioner ?? 'Select practitioner...'}
-              </span>
-              <CaretDown weight="regular" className="size-4 text-text-tertiary" />
-            </div>
-          </div>
-
-          {/* Referring Facility */}
-          <div>
-            <span className="text-xs text-text-tertiary uppercase tracking-wide">Referring Facility</span>
-            <div className="flex items-center justify-between px-3 py-2.5 mt-2 bg-bg-white border border-border-secondary rounded-md hover:border-border-primary transition-colors cursor-pointer">
-              <span className={cn(
-                'text-sm',
-                order.referringFacility ? 'text-text-primary' : 'text-text-placeholder'
-              )}>
-                {order.referringFacility ?? 'Select facility...'}
-              </span>
-              <CaretDown weight="regular" className="size-4 text-text-tertiary" />
-            </div>
-          </div>
-        </div>
-      </SheetContent>
-    </Sheet>
-  );
-}
 
 const ORDERS_PER_PAGE = 3;
 
@@ -307,28 +199,29 @@ function getVisiblePages(current: number, total: number): (number | 'ellipsis')[
   return pages;
 }
 
-export function ActiveOrdersCard({ patientId, orders }: ActiveOrdersCardProps) {
+export function ActiveOrdersCard({ patientId, orders, onSelectOrder, onViewAll, hideIllustrations }: ActiveOrdersCardProps) {
   const activeOrders = orders.filter(o => o.stage !== 'complete');
-  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [page, setPage] = useState(0);
 
   const totalPages = Math.ceil(activeOrders.length / ORDERS_PER_PAGE);
   const pagedOrders = activeOrders.slice(page * ORDERS_PER_PAGE, (page + 1) * ORDERS_PER_PAGE);
 
   return (
-    <>
       <div className="bg-bg-white border border-border-tertiary rounded-md shadow-xs overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-border-secondary">
-          <p className="text-base font-medium lasso:wght-medium leading-6 text-text-primary">
-            Active orders
-          </p>
-          <Link
-            href={`/patients/${patientId}/orders`}
-            className="text-sm text-text-secondary hover:text-text-primary hover:underline"
+        <div className="flex items-center justify-between px-4 py-2">
+          <div className="flex items-center gap-2">
+            <p className="text-sm font-medium lasso:wght-medium text-text-primary">
+              Active orders
+            </p>
+            <span className="text-[11px] text-text-tertiary">{activeOrders.length} order{activeOrders.length !== 1 ? 's' : ''}</span>
+          </div>
+          <button
+            onClick={onViewAll}
+            className="text-sm text-text-secondary hover:text-text-primary hover:underline cursor-pointer"
           >
             View all orders
-          </Link>
+          </button>
         </div>
 
         {/* Order Cards */}
@@ -339,66 +232,10 @@ export function ActiveOrdersCard({ patientId, orders }: ActiveOrdersCardProps) {
         ) : (
           <div className="grid grid-cols-3 gap-3 px-4 py-3">
             {pagedOrders.map(order => (
-              <OrderCard key={order.id} order={order} onSelect={setSelectedOrder} />
+              <OrderCard key={order.id} order={order} onSelect={o => onSelectOrder?.(o)} hideIllustrations={hideIllustrations} />
             ))}
           </div>
         )}
-
-        {/* Footer with pagination */}
-        <div className="flex items-center justify-between px-4 py-2 border-t border-border-tertiary">
-          <span className="text-xs text-text-secondary">
-            {activeOrders.length} order{activeOrders.length !== 1 ? 's' : ''}
-          </span>
-          {totalPages > 1 && (
-            <div className="flex items-center gap-1">
-              <button
-                onClick={() => setPage(p => Math.max(0, p - 1))}
-                disabled={page === 0}
-                className="flex items-center gap-1 px-2 py-1 text-sm text-text-secondary hover:text-text-primary disabled:opacity-40 disabled:pointer-events-none transition-colors cursor-pointer"
-              >
-                <CaretLeft weight="regular" className="size-3.5" />
-                Previous
-              </button>
-
-              {getVisiblePages(page, totalPages).map((p, i) =>
-                p === 'ellipsis' ? (
-                  <span key={`ellipsis-${i}`} className="flex items-center justify-center size-8 text-sm text-text-secondary">
-                    &middot;&middot;&middot;
-                  </span>
-                ) : (
-                  <button
-                    key={p}
-                    onClick={() => setPage(p)}
-                    className={cn(
-                      'flex items-center justify-center size-8 text-sm rounded-md transition-colors cursor-pointer',
-                      p === page
-                        ? 'border border-border-primary text-text-primary font-medium'
-                        : 'text-text-secondary hover:text-text-primary'
-                    )}
-                  >
-                    {p + 1}
-                  </button>
-                )
-              )}
-
-              <button
-                onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
-                disabled={page === totalPages - 1}
-                className="flex items-center gap-1 px-2 py-1 text-sm text-text-secondary hover:text-text-primary disabled:opacity-40 disabled:pointer-events-none transition-colors cursor-pointer"
-              >
-                Next
-                <CaretRight weight="regular" className="size-3.5" />
-              </button>
-            </div>
-          )}
-        </div>
       </div>
-
-      <OrderDetailDrawer
-        order={selectedOrder}
-        open={!!selectedOrder}
-        onClose={() => setSelectedOrder(null)}
-      />
-    </>
   );
 }

@@ -3,7 +3,6 @@
 import { Copy, Check } from '@phosphor-icons/react';
 import { useState } from 'react';
 import { Badge } from '@tennr/lasso/badge';
-import { Button } from '@tennr/lasso/button';
 import { cn } from '@tennr/lasso/utils/cn';
 import type { Insurance } from '@/types/patient';
 
@@ -22,11 +21,11 @@ function CopyableField({ label, value }: { label: string; value: string }) {
   };
 
   return (
-    <div className="flex items-start justify-between py-2">
-      <span className="text-sm text-text-secondary">{label}</span>
+    <div className="flex items-center justify-between py-1.5">
+      <span className="text-[13px] text-text-tertiary">{label}</span>
       <span
         onClick={handleCopy}
-        className="relative inline-flex items-center text-sm font-medium lasso:wght-medium text-text-primary cursor-pointer group hover:text-text-primary transition-colors"
+        className="relative inline-flex items-center text-[13px] font-medium lasso:wght-medium text-text-primary cursor-pointer group hover:text-text-primary transition-colors"
       >
         {value}
         <span className={cn(
@@ -54,13 +53,13 @@ export function PayerContactCard({ insurance }: PayerContactCardProps) {
   if (!insurance) {
     return (
       <div className="bg-bg-white border border-border-tertiary rounded-md shadow-xs overflow-hidden">
-        <div className="flex items-center justify-between px-4 py-3">
-          <p className="text-base font-medium lasso:wght-medium leading-6 text-text-primary">
+        <div className="flex items-center justify-between px-4 py-2">
+          <p className="text-sm font-medium lasso:wght-medium text-text-primary">
             Payer Contact
           </p>
         </div>
-        <div className="px-4 py-3 border-t border-border-secondary">
-          <p className="text-sm text-text-secondary">No insurance on file</p>
+        <div className="px-4 py-2 border-t border-border-tertiary">
+          <p className="text-[13px] text-text-tertiary">No insurance on file</p>
         </div>
       </div>
     );
@@ -69,17 +68,17 @@ export function PayerContactCard({ insurance }: PayerContactCardProps) {
   return (
     <div className="bg-bg-white border border-border-tertiary rounded-md shadow-xs overflow-hidden">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3">
-        <p className="text-base font-medium lasso:wght-medium leading-6 text-text-primary">
+      <div className="flex items-center justify-between px-4 py-2">
+        <p className="text-sm font-medium lasso:wght-medium text-text-primary">
           Payer Contact
         </p>
-        <Badge variant={statusVariant[insurance.status]} className="text-xs capitalize">
+        <Badge variant={statusVariant[insurance.status]} className="text-[10px] capitalize h-5">
           {insurance.status}
         </Badge>
       </div>
 
       {/* Details */}
-      <div className="px-4 border-t border-border-secondary divide-y divide-border-secondary">
+      <div className="px-4 border-t border-border-tertiary pt-1.5 pb-2">
         <CopyableField label="Carrier" value={insurance.carrier} />
         <CopyableField label="Plan" value={insurance.plan} />
         <CopyableField label="Member ID" value={insurance.memberId} />
@@ -93,20 +92,13 @@ export function PayerContactCard({ insurance }: PayerContactCardProps) {
           />
         )}
         {insurance.lastVerified && (
-          <div className="flex items-start justify-between py-2">
-            <span className="text-sm text-text-secondary">Last Verified</span>
-            <span className="text-sm text-text-primary">
+          <div className="flex items-center justify-between py-1.5">
+            <span className="text-[13px] text-text-tertiary">Last Verified</span>
+            <span className="text-[13px] text-text-primary">
               {new Date(insurance.lastVerified).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
             </span>
           </div>
         )}
-      </div>
-
-      {/* Footer */}
-      <div className="flex items-center justify-end px-4 py-2.5 border-t border-border-tertiary">
-        <Button variant="outline" size="sm">
-          Contact Payer
-        </Button>
       </div>
     </div>
   );

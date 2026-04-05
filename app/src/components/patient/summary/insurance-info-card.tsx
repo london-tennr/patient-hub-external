@@ -4,7 +4,6 @@ import type { Patient, Insurance } from '@/types/patient';
 
 interface InsuranceInfoCardProps {
   patient: Patient;
-  onEdit?: () => void;
 }
 
 function formatDate(dateString: string): string {
@@ -73,7 +72,7 @@ function InsuranceSection({
   );
 }
 
-export function InsuranceInfoCard({ patient, onEdit }: InsuranceInfoCardProps) {
+export function InsuranceInfoCard({ patient }: InsuranceInfoCardProps) {
   const hasInsurance = patient.primaryInsurance || patient.secondaryInsurance;
 
   return (
@@ -81,12 +80,6 @@ export function InsuranceInfoCard({ patient, onEdit }: InsuranceInfoCardProps) {
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-2 border-b border-[#efede9]">
         <div className="text-base font-medium lasso:wght-medium leading-6 text-foreground">Insurance</div>
-        <button
-          onClick={onEdit}
-          className="text-xs text-[#232018] hover:underline"
-        >
-          Edit
-        </button>
       </div>
 
       {/* Content */}

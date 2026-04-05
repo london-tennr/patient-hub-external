@@ -33,6 +33,7 @@ const mockPatients = [
       priority: 'p3' as const,
       stage: 'insurance_verification' as const,
       tennrStatus: 'processing' as const,
+      referralDate: '2026-03-15T10:00:00Z',
       syncStatus: { ehrSystem: 'BrightTree' as const, lastSynced: '2026-01-21T09:15:00Z' },
     },
     currentOrderStage: 'Eligibility & Benefits',

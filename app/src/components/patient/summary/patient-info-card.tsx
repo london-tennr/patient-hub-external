@@ -5,7 +5,6 @@ import type { Patient, Address } from '@/types/patient';
 
 interface PatientInfoCardProps {
   patient: Patient;
-  onEdit?: () => void;
 }
 
 function formatAddress(address: Address): string {
@@ -36,18 +35,12 @@ function ValueText({ children, className }: { children: React.ReactNode; classNa
   );
 }
 
-export function PatientInfoCard({ patient, onEdit }: PatientInfoCardProps) {
+export function PatientInfoCard({ patient }: PatientInfoCardProps) {
   return (
     <div className="bg-white border border-[#efede9] rounded-md shadow-[0px_1px_2px_0px_rgba(0,0,0,0.05)] overflow-hidden">
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-2 border-b border-[#efede9]">
         <div className="text-base font-medium lasso:wght-medium leading-6 text-foreground">Patient</div>
-        <button
-          onClick={onEdit}
-          className="text-xs text-[#232018] hover:underline"
-        >
-          Edit
-        </button>
       </div>
 
       {/* Content */}

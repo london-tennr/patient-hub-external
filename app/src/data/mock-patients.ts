@@ -1,25 +1,67 @@
-import type { Patient, PatientStatus, PatientPriority, PatientStage } from '@/types/patient';
+import type { Patient, PatientStatus, PatientPriority, PatientStage, PatientOrder, PatientOrderDoc } from '@/types/patient';
 
-const firstNames = [
-  'Kael', 'Giana', 'Jaquan', 'Brigid', 'Turner', 'Lena', 'Mateo', 'Priya',
-  'Desmond', 'Nadia', 'Felix', 'Celeste', 'Rowan', 'Amara', 'Silas', 'Ingrid',
-  'Kai', 'Maren', 'Darius', 'Elin', 'Thiago', 'Zara', 'Oren', 'Livia',
-  'Jasper', 'Suki', 'Callum', 'Noor', 'Beckett', 'Petra', 'Idris', 'Astrid',
-  'Emeka', 'Vera', 'Nico', 'Freya', 'Joaquin', 'Tessa', 'Malachi', 'Elara',
-  'Henrik', 'Yara', 'Bennett', 'Solana', 'Eamon', 'Iris', 'Tobias', 'Camille',
-  'Ravi', 'Linnea',
+// Hollywood celebrities with real birth dates (used for DOB generation)
+interface CelebrityInfo {
+  firstName: string;
+  lastName: string;
+  dob: string; // YYYY-MM-DD
+}
+
+const celebrities: CelebrityInfo[] = [
+  { firstName: 'Leonardo', lastName: 'DiCaprio', dob: '1974-11-11' },
+  { firstName: 'Scarlett', lastName: 'Johansson', dob: '1984-11-22' },
+  { firstName: 'Brad', lastName: 'Pitt', dob: '1963-12-18' },
+  { firstName: 'Angelina', lastName: 'Jolie', dob: '1975-06-04' },
+  { firstName: 'Tom', lastName: 'Hanks', dob: '1956-07-09' },
+  { firstName: 'Meryl', lastName: 'Streep', dob: '1949-06-22' },
+  { firstName: 'Denzel', lastName: 'Washington', dob: '1954-12-28' },
+  { firstName: 'Jennifer', lastName: 'Lawrence', dob: '1990-08-15' },
+  { firstName: 'Robert', lastName: 'Downey', dob: '1965-04-04' },
+  { firstName: 'Margot', lastName: 'Robbie', dob: '1990-07-02' },
+  { firstName: 'Morgan', lastName: 'Freeman', dob: '1937-06-01' },
+  { firstName: 'Natalie', lastName: 'Portman', dob: '1981-06-09' },
+  { firstName: 'Will', lastName: 'Smith', dob: '1968-09-25' },
+  { firstName: 'Cate', lastName: 'Blanchett', dob: '1969-05-14' },
+  { firstName: 'Ryan', lastName: 'Gosling', dob: '1980-11-12' },
+  { firstName: 'Emma', lastName: 'Stone', dob: '1988-11-06' },
+  { firstName: 'Samuel', lastName: 'Jackson', dob: '1948-12-21' },
+  { firstName: 'Viola', lastName: 'Davis', dob: '1965-08-11' },
+  { firstName: 'Chris', lastName: 'Hemsworth', dob: '1983-08-11' },
+  { firstName: 'Zendaya', lastName: 'Coleman', dob: '1996-09-01' },
+  { firstName: 'Keanu', lastName: 'Reeves', dob: '1964-09-02' },
+  { firstName: 'Sandra', lastName: 'Bullock', dob: '1964-07-26' },
+  { firstName: 'Dwayne', lastName: 'Johnson', dob: '1972-05-02' },
+  { firstName: 'Anne', lastName: 'Hathaway', dob: '1982-11-12' },
+  { firstName: 'Matt', lastName: 'Damon', dob: '1970-10-08' },
+  { firstName: 'Charlize', lastName: 'Theron', dob: '1975-08-07' },
+  { firstName: 'Tom', lastName: 'Cruise', dob: '1962-07-03' },
+  { firstName: 'Florence', lastName: 'Pugh', dob: '1996-01-03' },
+  { firstName: 'Harrison', lastName: 'Ford', dob: '1942-07-13' },
+  { firstName: 'Lupita', lastName: 'Nyongo', dob: '1983-03-01' },
+  { firstName: 'Jake', lastName: 'Gyllenhaal', dob: '1980-12-19' },
+  { firstName: 'Halle', lastName: 'Berry', dob: '1966-08-14' },
+  { firstName: 'Chris', lastName: 'Evans', dob: '1981-06-13' },
+  { firstName: 'Saoirse', lastName: 'Ronan', dob: '1994-04-12' },
+  { firstName: 'Benedict', lastName: 'Cumberbatch', dob: '1976-07-19' },
+  { firstName: 'Reese', lastName: 'Witherspoon', dob: '1976-03-22' },
+  { firstName: 'Oscar', lastName: 'Isaac', dob: '1979-03-09' },
+  { firstName: 'Kerry', lastName: 'Washington', dob: '1977-01-31' },
+  { firstName: 'Pedro', lastName: 'Pascal', dob: '1975-04-02' },
+  { firstName: 'Awkwafina', lastName: 'Nora', dob: '1988-06-02' },
+  { firstName: 'Timothee', lastName: 'Chalamet', dob: '1995-12-27' },
+  { firstName: 'Michelle', lastName: 'Yeoh', dob: '1962-08-06' },
+  { firstName: 'Jason', lastName: 'Momoa', dob: '1979-08-01' },
+  { firstName: 'Emma', lastName: 'Watson', dob: '1990-04-15' },
+  { firstName: 'Jeff', lastName: 'Goldblum', dob: '1952-10-22' },
+  { firstName: 'Gal', lastName: 'Gadot', dob: '1985-04-30' },
+  { firstName: 'Michael', lastName: 'Jordan', dob: '1987-02-09' },
+  { firstName: 'Sydney', lastName: 'Sweeney', dob: '1997-09-12' },
+  { firstName: 'Hugh', lastName: 'Jackman', dob: '1968-10-12' },
+  { firstName: 'Salma', lastName: 'Hayek', dob: '1966-09-02' },
 ];
 
-const lastNames = [
-  'Oakley', 'Bergson', 'Crona', 'Ankunding', 'Wintheiser', 'Halvorsen',
-  'Padilla', 'Chandrasekhar', 'Mbeki', 'Kowalski', 'Reyes', 'Johansson',
-  'Nakamura', 'Okonkwo', 'Fernandez', 'Lindqvist', 'Parekh', 'Moreau',
-  'Stavros', 'Adeyemi', 'Zhao', 'Ivanova', 'Delgado', 'Henriksen', 'Bautista',
-  'Larsen', 'Kimura', 'Mensah', 'Volkov', 'Gutierrez', 'Sørensen', 'Achebe',
-  'Petrov', 'Kaminski', 'Sundaram', 'Nilsen', 'Tremblay', 'Osei', 'Tanaka',
-  'Holm', 'Castillo', 'Björk', 'Nwosu', 'Pham', 'Engström', 'Okafor',
-  'Magnusson', 'Ayala', 'Singh', 'Eriksson',
-];
+const firstNames = celebrities.map(c => c.firstName);
+const lastNames = celebrities.map(c => c.lastName);
 
 const streets = [
   '472 Cascade Place, Apt 3B', '891 Willow Creek Drive', '321 High Ridge Circle',
@@ -50,6 +92,39 @@ const ehrSystems: ('BrightTree' | 'WeInfuse' | 'Niko')[] = [
   'BrightTree', 'WeInfuse', 'Niko',
 ];
 
+const orderCategories = [
+  'Respiratory / Oxygen',
+  'CPAP / BiPAP',
+  'Enteral Nutrition',
+  'Wound Care Supplies',
+  'Infusion Therapy',
+  'Mobility / Wheelchair',
+  'Hospital Bed / Equipment',
+  'Nebulizer / Accessories',
+];
+
+const referringProviders = [
+  'MARTIN LUTHER KING, JR. - LOS ANGELES (MLK-LA) HEALTHCARE CORPORATION, JACK GEOULA',
+  'CEDARS-SINAI MEDICAL CENTER, DR. SARAH CHEN',
+  'MAYO CLINIC ROCHESTER, DR. JAMES WILSON',
+  'MOUNT SINAI HEALTH SYSTEM, DR. ANNA KOVAC',
+  'JOHNS HOPKINS HOSPITAL, DR. MICHAEL BROOKS',
+  'UCLA HEALTH, DR. PATRICIA NGUYEN',
+  'CLEVELAND CLINIC, DR. ROBERT ANDERSON',
+  'MASSACHUSETTS GENERAL HOSPITAL, DR. EMILY TAYLOR',
+];
+
+const payers = ['Aetna', 'Blue Cross Blue Shield', 'UnitedHealthcare', 'Cigna', 'Humana', 'Medicare', 'Medicaid'];
+
+function generateExternalOrderId(): string {
+  const chars = '0123456789abcdef';
+  let id = 'SO';
+  for (let i = 0; i < 32; i++) {
+    id += chars[Math.floor(rand() * chars.length)];
+  }
+  return id;
+}
+
 // Deterministic seeded random for reproducibility
 function seededRandom(seed: number) {
   let s = seed;
@@ -63,6 +138,15 @@ const rand = seededRandom(42);
 
 function pick<T>(arr: T[]): T {
   return arr[Math.floor(rand() * arr.length)];
+}
+
+function shuffle<T>(arr: T[]): T[] {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(rand() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
 }
 
 function randomDob(): string {
@@ -82,6 +166,12 @@ function randomPhone(): string {
 function randomSyncDate(index: number): string {
   const base = new Date('2024-01-15T10:00:00Z');
   base.setHours(base.getHours() - index * 7 - Math.floor(rand() * 48));
+  return base.toISOString();
+}
+
+function randomReferralDate(index: number): string {
+  const base = new Date('2026-03-28T10:00:00Z');
+  base.setDate(base.getDate() - index - Math.floor(rand() * 30));
   return base.toISOString();
 }
 
@@ -144,7 +234,7 @@ function generateCoherentState(): CoherentState {
     };
   }
 
-  // ~10% needs_attention — processing but something is off
+  // ~10% needs_attention — ready for review
   if (r < 0.35) {
     const midStages: PatientStage[] = ['intake_review', 'insurance_verification', 'prior_authorization'];
     const stage = midStages[Math.floor(rand() * midStages.length)];
@@ -181,12 +271,13 @@ function generateCoherentState(): CoherentState {
     tennrStatus = t < 0.3 ? 'completed' : t < 0.6 ? 'processing' : 'in_queue';
   }
 
-  // Pick random future stages as running (1-3 non-sequential stages)
-  const futureStages = stages.filter((_, idx) => idx > stageIndex);
+  // Pick 2-3 random non-completed stages as running (processing spinners)
+  const uncompletedStages = stages.filter((_, idx) => idx >= stageIndex);
   const runningStages: PatientStage[] = [];
-  if (futureStages.length > 0) {
-    const numRunning = Math.min(futureStages.length, Math.floor(rand() * 3) + 1);
-    const shuffled = [...futureStages].sort(() => rand() - 0.5);
+  if (uncompletedStages.length > 0) {
+    const r2 = rand();
+    const numRunning = Math.min(uncompletedStages.length, r2 < 0.35 ? 2 : 3);
+    const shuffled = shuffle(uncompletedStages);
     for (let j = 0; j < numRunning; j++) {
       runningStages.push(shuffled[j]);
     }
@@ -201,15 +292,120 @@ function generateCoherentState(): CoherentState {
   };
 }
 
+function generateStageCompletedAt(
+  state: CoherentState,
+  referralDate: string,
+): Partial<Record<PatientStage, string>> | undefined {
+  const stageIndex = stages.indexOf(state.stage);
+  const isBlockedOrAttention =
+    state.status === 'blocked' ||
+    state.status === 'needs_attention' ||
+    state.status === 'missing_info';
+
+  // Number of completed stages (not including current if blocked/attention)
+  const completedCount = isBlockedOrAttention ? stageIndex : stageIndex + 1;
+
+  if (completedCount === 0) return undefined;
+
+  // Exclude running stages so they show as spinners in the UI
+  const runningSet = new Set((state.runningStages ?? []).map(s => stages.indexOf(s)));
+  const eligibleIndices = stages.map((_, i) => i).filter(i => !runningSet.has(i));
+  const shuffled = shuffle(eligibleIndices);
+  const pickedIndices = shuffled.slice(0, Math.min(completedCount, eligibleIndices.length)).sort((a, b) => a - b);
+
+  const result: Partial<Record<PatientStage, string>> = {};
+  const base = new Date(referralDate);
+
+  for (const idx of pickedIndices) {
+    base.setDate(base.getDate() + 1 + Math.floor(rand() * 3));
+    base.setHours(8 + Math.floor(rand() * 10), Math.floor(rand() * 60));
+    result[stages[idx]] = base.toISOString();
+  }
+
+  return result;
+}
+
+const activityTitles: Record<PatientStatus, string[]> = {
+  on_track: [
+    'Insurance verification initiated',
+    'Eligibility re-verified with carrier',
+    'Prior auth submitted',
+    'Document uploaded by patient',
+    'Referral received from provider',
+    'Order qualification in progress',
+  ],
+  missing_info: [
+    'Missing insurance card',
+    'Incomplete referral',
+    'Missing CMN form',
+    'Awaiting patient demographics update',
+  ],
+  needs_attention: [
+    'Prior auth request denied',
+    'Eligibility check failed',
+    'Carrier response overdue',
+    'Document mismatch flagged for review',
+  ],
+  blocked: [
+    'Prior auth denied by carrier',
+    'Insurance coverage terminated',
+    'Patient unreachable',
+    'Order blocked',
+  ],
+  completed: [
+    'Order completed',
+    'Order fulfilled',
+    'All claims processed and accepted',
+  ],
+  inactive: [
+    'Patient opted out of treatment',
+    'Referral withdrawn by provider',
+    'Patient transferred to another facility',
+  ],
+};
+
+function generateLastActivity(status: PatientStatus, referralDate: string): { title: string; timestamp: string } {
+  const titles = activityTitles[status];
+  const title = titles[Math.floor(rand() * titles.length)];
+  const base = new Date(referralDate);
+  // Activity is 0-14 days after referral
+  base.setDate(base.getDate() + Math.floor(rand() * 14));
+  base.setHours(8 + Math.floor(rand() * 10), Math.floor(rand() * 60));
+  return { title, timestamp: base.toISOString() };
+}
+
 function generatePatients(count: number): Patient[] {
   const patients: Patient[] = [];
 
   for (let i = 0; i < count; i++) {
-    const firstName = pick(firstNames);
-    const lastName = pick(lastNames);
+    const celeb = celebrities[i % celebrities.length];
+    const firstName = celeb.firstName;
+    const lastName = celeb.lastName;
     const loc = pick(cities);
     const id = String(i + 1);
     const patientId = String(593101 + i);
+    const coherentState = generateCoherentState();
+    const referralDate = randomReferralDate(i);
+
+    const docs: PatientOrderDoc[] = [
+      { id: `doc-${id}-1`, name: `${lastName}_referral`, pages: Math.floor(rand() * 8) + 2 },
+    ];
+    if (rand() > 0.4) {
+      docs.push({ id: `doc-${id}-2`, name: `${lastName}_cmn`, pages: Math.floor(rand() * 4) + 1 });
+    }
+    if (rand() > 0.5) {
+      docs.push({ id: `doc-${id}-3`, name: `${lastName}_prior_auth`, pages: Math.floor(rand() * 3) + 1 });
+    }
+
+    const order: PatientOrder = {
+      id: `order-${id}`,
+      externalOrderId: generateExternalOrderId(),
+      category: pick(orderCategories),
+      referredBy: pick(referringProviders),
+      receivedDate: referralDate,
+      payer: rand() > 0.3 ? pick(payers) : null,
+      documents: docs,
+    };
 
     patients.push({
       id,
@@ -217,7 +413,7 @@ function generatePatients(count: number): Patient[] {
       mrn: String(100000 + Math.floor(rand() * 900000)),
       firstName,
       lastName,
-      dob: randomDob(),
+      dob: celeb.dob,
       phone: randomPhone(),
       email: `${firstName.toLowerCase()}.${lastName.toLowerCase()}@email.com`,
       address: {
@@ -226,12 +422,55 @@ function generatePatients(count: number): Patient[] {
         state: loc.state,
         zip: loc.zip,
       },
-      ...generateCoherentState(),
+      ...coherentState,
+      stageCompletedAt: generateStageCompletedAt(coherentState, referralDate),
+      referralDate,
       syncStatus: {
         ehrSystem: pick(ehrSystems),
         lastSynced: randomSyncDate(i),
       },
+      lastActivity: generateLastActivity(coherentState.status, referralDate),
+      order,
     });
+  }
+
+  // Override statuses: 1 bug, 1 action required, 3 on_track, rest completed
+  // Action needed and platform issues are surfaced first
+  for (let i = 0; i < patients.length; i++) {
+    if (i === 0) {
+      patients[i].status = 'blocked';
+      patients[i].stage = 'prior_authorization';
+      patients[i].tennrStatus = 'idle';
+      patients[i].lastActivity = generateLastActivity('blocked', patients[i].referralDate);
+    } else if (i === 1) {
+      patients[i].status = 'missing_info';
+      patients[i].stage = 'insurance_verification';
+      patients[i].tennrStatus = 'in_queue';
+      patients[i].lastActivity = generateLastActivity('missing_info', patients[i].referralDate);
+    } else if (i < 5) {
+      patients[i].status = 'on_track';
+      patients[i].lastActivity = generateLastActivity('on_track', patients[i].referralDate);
+      // Ensure running stages exist for processing patients
+      if (!patients[i].runningStages || patients[i].runningStages!.length === 0) {
+        const stageIdx = stages.indexOf(patients[i].stage);
+        const uncompleted = stages.filter((_, idx) => idx >= stageIdx);
+        const numRunning = Math.min(uncompleted.length, rand() < 0.35 ? 2 : 3);
+        patients[i].runningStages = shuffle(uncompleted).slice(0, numRunning);
+      }
+      // Rebuild stageCompletedAt excluding running stages
+      const runSet = new Set(patients[i].runningStages);
+      const existing = patients[i].stageCompletedAt ?? {};
+      const cleaned: typeof existing = {};
+      for (const [k, v] of Object.entries(existing)) {
+        if (!runSet.has(k as PatientStage)) cleaned[k as PatientStage] = v;
+      }
+      patients[i].stageCompletedAt = cleaned;
+    } else {
+      patients[i].status = 'completed';
+      patients[i].stage = 'claim_submitted';
+      patients[i].tennrStatus = 'completed';
+      patients[i].lastActivity = generateLastActivity('completed', patients[i].referralDate);
+    }
   }
 
   return patients;

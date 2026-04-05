@@ -14,8 +14,8 @@ export function SearchProvider({ children }: { children: React.ReactNode }) {
     router.push(`/orders/${orderId}`);
   };
 
-  const handleSelectEasterEgg = () => {
-    router.push('/explore');
+  const handleSelectIllustration = (path: string) => {
+    router.push(path);
   };
 
   return (
@@ -24,7 +24,7 @@ export function SearchProvider({ children }: { children: React.ReactNode }) {
       <SearchModal
         onSelectPatient={handleSelectPatient}
         onSelectOrder={handleSelectOrder}
-        onSelectEasterEgg={handleSelectEasterEgg}
+        onSelectIllustration={handleSelectIllustration}
       />
     </>
   );

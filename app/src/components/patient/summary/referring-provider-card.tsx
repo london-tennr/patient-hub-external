@@ -2,7 +2,6 @@
 
 import { Copy, Check } from '@phosphor-icons/react';
 import { useState } from 'react';
-import { Button } from '@tennr/lasso/button';
 import { cn } from '@tennr/lasso/utils/cn';
 
 interface ReferringProvider {
@@ -30,11 +29,11 @@ function CopyableField({ label, value }: { label: string; value: string }) {
   };
 
   return (
-    <div className="flex items-start justify-between py-2">
-      <span className="text-sm text-text-secondary">{label}</span>
+    <div className="flex items-center justify-between py-1.5">
+      <span className="text-[13px] text-text-tertiary">{label}</span>
       <span
         onClick={handleCopy}
-        className="relative inline-flex items-center text-sm font-medium lasso:wght-medium text-text-primary cursor-pointer group hover:text-text-primary transition-colors"
+        className="relative inline-flex items-center text-[13px] font-medium lasso:wght-medium text-text-primary cursor-pointer group hover:text-text-primary transition-colors"
       >
         {value}
         <span className={cn(
@@ -68,14 +67,14 @@ export function ReferringProviderCard({ provider = mockProvider }: Partial<Refer
   return (
     <div className="bg-bg-white border border-border-tertiary rounded-md shadow-xs overflow-hidden">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3">
-        <p className="text-base font-medium lasso:wght-medium leading-6 text-text-primary">
+      <div className="flex items-center justify-between px-4 py-2">
+        <p className="text-sm font-medium lasso:wght-medium text-text-primary">
           Referring Provider
         </p>
       </div>
 
       {/* Provider Details */}
-      <div className="px-4 border-t border-border-secondary divide-y divide-border-secondary">
+      <div className="px-4 border-t border-border-tertiary pt-1.5 pb-2">
         <CopyableField label="Provider" value={p.name} />
         <CopyableField label="NPI" value={p.npi} />
         <CopyableField label="Specialty" value={p.specialty} />
@@ -83,13 +82,6 @@ export function ReferringProviderCard({ provider = mockProvider }: Partial<Refer
         <CopyableField label="Phone" value={p.phone} />
         <CopyableField label="Fax" value={p.fax} />
         <CopyableField label="Address" value={p.address} />
-      </div>
-
-      {/* Footer */}
-      <div className="flex items-center justify-end px-4 py-2.5 border-t border-border-tertiary">
-        <Button variant="outline" size="sm">
-          Contact Provider
-        </Button>
       </div>
     </div>
   );

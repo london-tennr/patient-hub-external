@@ -9,7 +9,7 @@ interface SearchOption {
   label: string;
   value: string;
   category?: string;
-  resultType: 'patient' | 'order' | 'easter_egg';
+  resultType: 'patient' | 'order' | 'illustration';
   data: SearchResult;
   [key: string]: string | string[] | SearchResult | undefined;
 }
@@ -17,7 +17,7 @@ interface SearchOption {
 interface SearchModalProps {
   onSelectPatient: (patientId: string) => void;
   onSelectOrder: (orderId: string) => void;
-  onSelectEasterEgg?: () => void;
+  onSelectIllustration?: (path: string) => void;
 }
 
 // Mock data for development
@@ -50,6 +50,7 @@ const mockPatients: SearchResult[] = [
       priority: 'p3' as const,
       stage: 'insurance_verification' as const,
       tennrStatus: 'processing' as const,
+      referralDate: '2026-03-15T10:00:00Z',
       syncStatus: { ehrSystem: 'BrightTree' as const, lastSynced: '2026-01-21T09:15:00Z' },
     },
     currentOrderStage: 'Eligibility & Benefits',
@@ -90,7 +91,7 @@ const stageBadgeVariant: Record<string, 'default' | 'secondary' | 'outline' | 'd
   complete: 'default',
 };
 
-export function SearchModal({ onSelectPatient, onSelectOrder, onSelectEasterEgg }: SearchModalProps) {
+export function SearchModal({ onSelectPatient, onSelectOrder, onSelectIllustration }: SearchModalProps) {
   const options: SearchOption[] = useMemo(() => {
     const allResults = [...mockPatients, ...mockOrders];
 
@@ -116,21 +117,28 @@ export function SearchModal({ onSelectPatient, onSelectOrder, onSelectEasterEgg 
       }
     });
 
-    // Easter egg: hidden result that only appears when searching "illustration"
+    // Illustration mode: hidden results that appear when searching "illustration"
     mapped.push({
-      label: 'illustration',
-      value: 'easter-egg',
-      resultType: 'easter_egg',
+      label: 'illustration explore v.1',
+      value: '/patients',
+      resultType: 'illustration',
       data: mockPatients[0],
-      category: 'Explore',
+      category: 'Illustration Mode',
+    });
+    mapped.push({
+      label: 'illustration explore v.2',
+      value: '/explore-progress-bar',
+      resultType: 'illustration',
+      data: mockPatients[0],
+      category: 'Illustration Mode',
     });
 
     return mapped;
   }, []);
 
   const handleSelectOption = (option: SearchOption) => {
-    if (option.resultType === 'easter_egg') {
-      onSelectEasterEgg?.();
+    if (option.resultType === 'illustration') {
+      onSelectIllustration?.(option.value);
     } else if (option.resultType === 'patient') {
       onSelectPatient(option.value);
     } else {
@@ -187,16 +195,18 @@ export function SearchModal({ onSelectPatient, onSelectOrder, onSelectEasterEgg 
       );
     }
 
-    if (option.resultType === 'easter_egg') {
+    if (option.resultType === 'illustration') {
+      const version = option.value === '/patients' ? 'v.1' : 'v.2';
+      const description = option.value === '/patients'
+        ? 'Explore with sidebar preview'
+        : 'Explore with progress bar';
       return (
         <div className="flex items-center justify-between w-full">
           <div>
-            <p className="font-medium">Illustration Mode</p>
-            <p className="text-sm text-muted-foreground">
-              Explore the patient view with a different aesthetic
-            </p>
+            <p className="font-medium">Explore {version}</p>
+            <p className="text-sm text-muted-foreground">{description}</p>
           </div>
-          <Badge variant="outline">Explore</Badge>
+          <Badge variant="outline">Illustration</Badge>
         </div>
       );
     }

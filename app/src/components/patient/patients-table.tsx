@@ -14,17 +14,18 @@ import {
   type PaginationState,
   type SortingState,
 } from '@tanstack/react-table';
-import { CaretLeft, CaretRight, CaretUp, CaretDown, CheckCircle, WarningCircle, CircleNotch, Circle, Copy, Check } from '@phosphor-icons/react';
+import { CaretLeft, CaretRight, CaretUp, CaretDown, CheckCircle, WarningCircle, CircleNotch, Circle, Copy, Check, Eye } from '@phosphor-icons/react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@tennr/lasso/table';
 import { Badge } from '@tennr/lasso/badge';
 import { cn } from '@tennr/lasso/utils/cn';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@tennr/lasso/tooltip';
 import type { Patient, PatientPriority, PatientStage, PatientStatus } from '@/types/patient';
+import { PatientStatusBadge, PatientDotIndicator } from '@/components/patient/patient-status-badge';
 
 const statusBadgeConfig: Record<PatientStatus, { label: string; variant: 'success' | 'warning' | 'destructive' | 'muted' | 'outline' | 'info' }> = {
   on_track: { label: 'On Track', variant: 'success' },
   missing_info: { label: 'Missing Info', variant: 'warning' },
-  needs_attention: { label: 'Needs Attention', variant: 'destructive' },
+  needs_attention: { label: 'Ready for Review', variant: 'destructive' },
   blocked: { label: 'Blocked', variant: 'destructive' },
   completed: { label: 'Completed', variant: 'muted' },
   inactive: { label: 'Inactive', variant: 'outline' },
@@ -136,11 +137,315 @@ function CopyableValue({ label, value }: { label: string; value: string }) {
   );
 }
 
-function createColumns(onFilterBy?: OnFilterBy) {
+export type OnStageClick = (patientId: string, stage: PatientStage) => void;
+export type ProgressStyle = 'stepper' | 'ring';
+
+function RingProgress({ patient, onStageClick }: { patient: Patient; onStageClick?: OnStageClick }) {
+  const currentStageIndex = stageOrder.indexOf(patient.stage);
+  const isBlocked = patient.status === 'blocked';
+  const isAttention = patient.status === 'needs_attention' || patient.status === 'missing_info';
+  const isCompleted = patient.status === 'completed';
+  const isInactive = patient.status === 'inactive';
+
+  // For completed patients, show full ring; for others, count from stageCompletedAt
+  const completedStages = isCompleted ? TOTAL_STAGES : Object.keys(patient.stageCompletedAt ?? {}).length;
+  const percentage = Math.round((completedStages / TOTAL_STAGES) * 100);
+
+  // Ring SVG params
+  const size = 32;
+  const strokeWidth = 3;
+  const radius = (size - strokeWidth) / 2;
+  const circumference = 2 * Math.PI * radius;
+  const offset = circumference - (percentage / 100) * circumference;
+
+  // Color based on status
+  let strokeColor = 'var(--green-9)';
+  let textColor = 'text-[var(--green-9)]';
+  if (isBlocked) {
+    strokeColor = '#ef4444';
+    textColor = 'text-[#ef4444]';
+  } else if (isAttention) {
+    strokeColor = 'var(--amber-9)';
+    textColor = 'text-[var(--amber-9)]';
+  } else if (isInactive) {
+    strokeColor = 'var(--neutral-8)';
+    textColor = 'text-text-tertiary';
+  }
+
+  const currentStageLabel = stageConfig[patient.stage]?.label ?? patient.stage;
+  const needsAction = isBlocked || isAttention;
+  const clickable = needsAction && onStageClick;
+  const isInProgress = !isCompleted && !isInactive && !isBlocked && !isAttention;
+
+  // Unique ID for the shimmer gradient per instance
+  const gradientId = `shimmer-${patient.id}`;
+
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <button
+          className={cn(
+            'flex items-center gap-2.5',
+            clickable && 'cursor-pointer hover:opacity-80 transition-opacity'
+          )}
+          onClick={(e) => {
+            e.stopPropagation();
+            if (clickable) {
+              onStageClick(patient.id, patient.stage);
+            }
+          }}
+        >
+          <div className="relative shrink-0">
+            <svg width={size} height={size} className="-rotate-90">
+              {isInProgress && (
+                <defs>
+                  <linearGradient id={gradientId} x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" stopColor="var(--green-9)" stopOpacity="1" />
+                    <stop offset="40%" stopColor="var(--green-9)" stopOpacity="1" />
+                    <stop offset="50%" stopColor="var(--green-11)" stopOpacity="1" />
+                    <stop offset="60%" stopColor="var(--green-9)" stopOpacity="1" />
+                    <stop offset="100%" stopColor="var(--green-9)" stopOpacity="1" />
+                    <animateTransform
+                      attributeName="gradientTransform"
+                      type="translate"
+                      from="-1 0"
+                      to="1 0"
+                      dur="2s"
+                      repeatCount="indefinite"
+                    />
+                  </linearGradient>
+                </defs>
+              )}
+              <circle
+                cx={size / 2}
+                cy={size / 2}
+                r={radius}
+                fill="none"
+                stroke="var(--neutral-4)"
+                strokeWidth={strokeWidth}
+              />
+              <circle
+                cx={size / 2}
+                cy={size / 2}
+                r={radius}
+                fill="none"
+                stroke={isInProgress ? `url(#${gradientId})` : strokeColor}
+                strokeWidth={strokeWidth}
+                strokeDasharray={circumference}
+                strokeDashoffset={offset}
+                strokeLinecap="round"
+              />
+            </svg>
+            <span className={cn('absolute inset-0 flex items-center justify-center text-[10px] font-semibold', textColor)}>
+              {percentage}%
+            </span>
+          </div>
+          <span className="text-xs text-text-secondary truncate">{currentStageLabel}</span>
+        </button>
+      </TooltipTrigger>
+      <TooltipContent side="top" className="p-3 max-w-[220px]">
+        <div className="flex flex-col gap-2">
+          <span className="font-semibold text-xs">{currentStageLabel}</span>
+          <div className="flex flex-col gap-1">
+            {(() => {
+              const runningSet = new Set(patient.runningStages ?? []);
+              const completedSet = new Set(Object.keys(patient.stageCompletedAt ?? {}) as PatientStage[]);
+              return stageOrder.map((stage, i) => {
+                const isStageCurrent = i === currentStageIndex;
+                const isRunning = isInProgress && runningSet.has(stage);
+                const stageCompleted = completedSet.has(stage);
+                const stageCurrent = isStageCurrent && (isBlocked || isAttention);
+
+                let dotColor = 'bg-border-secondary';
+                let label = stageConfig[stage].label;
+                let suffix = '';
+
+                if (isRunning) {
+                  suffix = ' — Processing';
+                } else if (stageCompleted) {
+                  dotColor = 'bg-[var(--green-9)]';
+                  suffix = '';
+                } else if (stageCurrent && isBlocked) {
+                  dotColor = 'bg-neutral-400';
+                  suffix = ' — Platform issue';
+                } else if (stageCurrent) {
+                  dotColor = 'bg-[var(--amber-9)]';
+                  suffix = ' — Ready for review';
+                } else {
+                  suffix = ' — Pending';
+                }
+
+                const completedAt = stageCompleted ? patient.stageCompletedAt?.[stage] : undefined;
+                const timestamp = completedAt
+                  ? new Date(completedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
+                  : undefined;
+
+                return (
+                  <div key={stage} className="flex items-start gap-2">
+                    <div className="mt-0.5">
+                      {stageCompleted ? (
+                        <CheckCircle weight="fill" className="size-3.5 text-[var(--green-9)] shrink-0" />
+                      ) : isRunning ? (
+                        <CircleNotch weight="bold" className="size-3.5 text-blue-500 shrink-0 animate-spin" />
+                      ) : (
+                        <span className={cn('block size-2 rounded-full shrink-0 mt-[3px]', dotColor)} />
+                      )}
+                    </div>
+                    <div className="flex flex-col">
+                      <span className={cn(
+                        'text-[11px] leading-tight',
+                        stageCompleted ? 'text-[var(--green-11)]' :
+                        isRunning ? 'text-blue-400 font-medium' :
+                        stageCurrent ? 'text-white font-medium' :
+                        'text-[var(--neutral-9)]'
+                      )}>
+                        {label}{suffix}
+                      </span>
+                      {timestamp && (
+                        <span className="text-[10px] text-[var(--neutral-8)] leading-tight">{timestamp}</span>
+                      )}
+                    </div>
+                  </div>
+                );
+              });
+            })()}
+          </div>
+        </div>
+      </TooltipContent>
+    </Tooltip>
+  );
+}
+
+function DotProgress({ patient }: { patient: Patient }) {
+  const currentStageIndex = stageOrder.indexOf(patient.stage);
+  const isBlocked = patient.status === 'blocked';
+  const isAttention = patient.status === 'needs_attention' || patient.status === 'missing_info';
+  const isCompleted = patient.status === 'completed';
+  const isInactive = patient.status === 'inactive';
+  const runningSet = new Set(patient.runningStages ?? []);
+  const completedSet = new Set(Object.keys(patient.stageCompletedAt ?? {}) as PatientStage[]);
+
+  const currentLabel = stageConfig[patient.stage]?.label ?? patient.stage;
+
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <div className="flex flex-col gap-1.5 cursor-default">
+          {/* Dots row */}
+          <div className="flex items-center gap-1">
+            {stageOrder.map((stage, i) => {
+              const isCurrent = i === currentStageIndex;
+              const isOnTrack = !isCompleted && !isInactive && !isBlocked && !isAttention;
+              const isRunning = isOnTrack && runningSet.has(stage);
+              const isStageCompleted = isCompleted || completedSet.has(stage);
+
+              // Gray-to-green on hover only for completed/inactive patients; green by default for others
+              const useGrayDefault = isCompleted || isInactive;
+              let dotColor = 'bg-border-secondary';
+              let showSpinner = false;
+              let showPing = false;
+              if (isCurrent && isAttention) {
+                dotColor = 'bg-amber-500';
+                showPing = true;
+              } else if (isCurrent && isBlocked) {
+                dotColor = 'bg-neutral-400';
+              } else if (isRunning) {
+                showSpinner = true;
+              } else if (isStageCompleted) {
+                dotColor = 'bg-neutral-500 group-hover/row:bg-emerald-500';
+              }
+
+              const connectorCompleted = isStageCompleted
+                ? 'bg-neutral-400 group-hover/row:bg-emerald-400'
+                : 'bg-border-secondary';
+
+              return (
+                <div key={stage} className="flex items-center gap-1">
+                  {showSpinner ? (
+                    <svg className="size-3 shrink-0 animate-spin text-blue-500" viewBox="0 0 16 16" fill="none">
+                      <circle cx="8" cy="8" r="6" stroke="currentColor" strokeWidth="2.5" strokeOpacity="0.25" />
+                      <path d="M14 8a6 6 0 00-6-6" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
+                    </svg>
+                  ) : showPing ? (
+                    <span className="relative flex size-2.5 shrink-0 items-center justify-center">
+                      <span className="absolute inline-flex size-2.5 rounded-full bg-amber-400 opacity-50 animate-ping" />
+                      <span className="relative inline-flex size-2 rounded-full bg-amber-500" />
+                    </span>
+                  ) : (
+                    <span className={cn(
+                      'size-2 rounded-full transition-colors',
+                      dotColor,
+                    )} />
+                  )}
+                  {i < stageOrder.length - 1 && (
+                    <span className={cn(
+                      'w-2.5 h-px transition-colors',
+                      connectorCompleted,
+                    )} />
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </TooltipTrigger>
+      <TooltipContent side="top" className="p-3 max-w-[220px]">
+        <div className="flex flex-col gap-2">
+          <span className="font-semibold text-xs">{currentLabel}</span>
+          <div className="flex flex-col gap-1">
+            {stageOrder.map((stage, i) => {
+              const isStageCompleted = isCompleted || completedSet.has(stage);
+              const isCurrent = i === currentStageIndex;
+              const isOnTrack = !isCompleted && !isInactive && !isBlocked && !isAttention;
+              const isRunning = isOnTrack && runningSet.has(stage);
+
+              let suffix = '';
+              if (isRunning) {
+                suffix = ' — Processing';
+              } else if (isStageCompleted) {
+                // no suffix
+              } else if (isCurrent && isBlocked) {
+                suffix = ' — Platform issue';
+              } else if (isCurrent && isAttention) {
+                suffix = ' — Ready for review';
+              } else if (!isStageCompleted && !isRunning) {
+                suffix = ' — Pending';
+              }
+
+              return (
+                <div key={stage} className="flex items-center gap-2">
+                  {isRunning ? (
+                    <CircleNotch weight="bold" className="size-2.5 text-blue-500 animate-spin shrink-0" />
+                  ) : (
+                    <span className={cn(
+                      'size-2 rounded-full shrink-0',
+                      isStageCompleted ? 'bg-emerald-500' : isCurrent && isBlocked ? 'bg-neutral-400' : isCurrent && isAttention ? 'bg-amber-500' : 'bg-border-secondary',
+                    )} />
+                  )}
+                  <span className={cn(
+                    'text-[11px]',
+                    isRunning ? 'text-blue-400 font-medium' : isStageCompleted ? 'text-emerald-400' : isCurrent ? 'text-white font-medium' : 'text-[var(--neutral-9)]',
+                  )}>
+                    {stageConfig[stage].label}{suffix}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </TooltipContent>
+    </Tooltip>
+  );
+}
+
+export type OnPreviewPatient = (patient: Patient) => void;
+
+function createColumns(onFilterBy?: OnFilterBy, onStageClick?: OnStageClick, progressStyle: ProgressStyle = 'stepper', onPreviewPatient?: OnPreviewPatient, onOpenWorkflow?: (patient: Patient) => void) {
   return [
     columnHelper.accessor((row) => `${row.firstName} ${row.lastName}`, {
       id: 'patient',
       header: 'Patient',
+      size: 220,
       cell: (info) => {
         const patient = info.row.original;
         return (
@@ -156,116 +461,91 @@ function createColumns(onFilterBy?: OnFilterBy) {
       },
       enableHiding: false,
     }),
-    columnHelper.accessor('priority', {
-      id: 'priority',
-      header: 'Priority',
+    columnHelper.accessor('status', {
+      id: 'status',
+      header: 'Patient Status',
+      size: 180,
       cell: (info) => {
-        const config = priorityConfig[info.getValue()];
+        const patient = info.row.original;
+        return <PatientStatusBadge status={patient.status} stage={patient.stage} onOpenWorkflow={() => onOpenWorkflow?.(patient)} />;
+      },
+      sortingFn: (rowA, rowB) => {
+        const priority: Record<PatientStatus, number> = {
+          needs_attention: 0,
+          missing_info: 0,
+          on_track: 1,
+          blocked: 2,
+          completed: 3,
+          inactive: 4,
+        };
+        return priority[rowA.original.status] - priority[rowB.original.status];
+      },
+    }),
+    columnHelper.accessor((row) => row.lastActivity, {
+      id: 'lastActivity',
+      header: 'Last Activity',
+      cell: (info) => {
+        const activity = info.getValue();
+        if (!activity) return <span className="text-text-tertiary">—</span>;
+        const date = new Date(activity.timestamp);
+        const formatted = date.toLocaleDateString('en-US', {
+          month: '2-digit',
+          day: '2-digit',
+          year: 'numeric',
+        });
         return (
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onFilterBy?.('priority', info.getValue());
-            }}
-            className="cursor-pointer"
-          >
-            <Badge variant={config.variant}>{config.label}</Badge>
-          </button>
+          <div className="flex flex-col gap-0.5">
+            <span className="text-sm text-text-primary truncate max-w-[220px]">{activity.title}</span>
+            <span className="text-xs text-text-tertiary">{formatted}</span>
+          </div>
         );
+      },
+      size: 220,
+    }),
+    columnHelper.accessor('referralDate', {
+      id: 'referralDate',
+      header: 'Most Recent Referral',
+      size: 180,
+      cell: (info) => {
+        const date = new Date(info.getValue());
+        return date.toLocaleDateString('en-US', {
+          month: '2-digit',
+          day: '2-digit',
+          year: 'numeric',
+        });
       },
     }),
     columnHelper.accessor('stage', {
-      id: 'stage',
-      header: 'Stage',
+      id: 'progress',
+      header: 'Progress',
       cell: (info) => {
         const patient = info.row.original;
-        const currentStageIndex = stageOrder.indexOf(info.getValue());
-        const isBlocked = patient.status === 'blocked';
-        const isAttention = patient.status === 'needs_attention' || patient.status === 'missing_info';
-        const isBlockedOrAttention = isBlocked || isAttention;
-        const runningSet = new Set(patient.runningStages ?? []);
-
-        return (
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onFilterBy?.('stage', info.getValue());
-            }}
-            className="cursor-pointer w-full"
-          >
-            <div className="flex items-center gap-0.5">
-              {stageOrder.map((stage, i) => {
-                const isCompleted = i < currentStageIndex;
-                const isCurrent = i === currentStageIndex;
-                const isFuture = i > currentStageIndex;
-                const isRunning = isFuture && !isBlockedOrAttention && runningSet.has(stage);
-
-                const stageLabel = stageConfig[stage].label;
-                let tooltipText = stageLabel;
-                if (isCompleted) {
-                  tooltipText = `${stageLabel} — Completed`;
-                } else if (isCurrent && isBlocked) {
-                  tooltipText = `${stageLabel} — Blocked — awaiting resolution`;
-                } else if (isCurrent && isAttention) {
-                  const reason = patient.status === 'missing_info' ? 'Missing information required' : 'Needs attention';
-                  tooltipText = `${stageLabel} — ${reason}`;
-                } else if (isCurrent && !isBlockedOrAttention) {
-                  tooltipText = `${stageLabel} — Completed`;
-                } else if (isRunning) {
-                  tooltipText = `${stageLabel} — Runs are running`;
-                } else if (isFuture) {
-                  tooltipText = `${stageLabel} — Pending`;
-                }
-
-                return (
-                  <div key={stage} className="flex items-center">
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <span className="inline-flex">
-                          {isCompleted && (
-                            <CheckCircle weight="fill" className="size-4 text-[var(--green-9)] shrink-0" />
-                          )}
-                          {isCurrent && isBlocked && (
-                            <WarningCircle weight="fill" className="size-4 text-[#b44a3a] shrink-0" />
-                          )}
-                          {isCurrent && isAttention && (
-                            <WarningCircle weight="fill" className="size-4 text-[var(--amber-9)] shrink-0" />
-                          )}
-                          {isCurrent && !isBlockedOrAttention && (
-                            <CheckCircle weight="fill" className="size-4 text-[var(--green-9)] shrink-0" />
-                          )}
-                          {isRunning && (
-                            <div className="size-4 shrink-0 rounded-full border-2 border-border-secondary border-t-text-tertiary animate-spin [animation-duration:3.5s]" />
-                          )}
-                          {isFuture && !isRunning && (
-                            <Circle weight="fill" className="size-4 text-border-secondary shrink-0" />
-                          )}
-                        </span>
-                      </TooltipTrigger>
-                      <TooltipContent side="top">
-                        {tooltipText}
-                      </TooltipContent>
-                    </Tooltip>
-                    {i < stageOrder.length - 1 && (
-                      <div className={cn(
-                        'h-[2px] w-2',
-                        i < currentStageIndex ? 'bg-[var(--green-9)]' : 'bg-border-secondary'
-                      )} />
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          </button>
-        );
+        return <DotProgress patient={patient} />;
       },
+      enableSorting: false,
+      size: 220,
     }),
-    columnHelper.accessor((row) => row.syncStatus.lastSynced, {
-      id: 'lastUpdated',
-      header: 'Last updated',
-      cell: (info) => formatLastUpdated(info.getValue()),
-      size: 120,
-    }),
+    ...(onPreviewPatient ? [columnHelper.display({
+      id: 'preview',
+      header: '',
+      size: 48,
+      cell: (info) => (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onPreviewPatient(info.row.original);
+              }}
+              className="flex items-center justify-center size-7 rounded-md hover:bg-bg-secondary transition-colors cursor-pointer"
+            >
+              <Eye weight="regular" className="size-4 text-text-tertiary" />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="top">Quick view</TooltipContent>
+        </Tooltip>
+      ),
+    })] : []),
   ];
 }
 
@@ -323,7 +603,7 @@ export function PatientsTable({ patients, onPatientClick }: PatientsTableProps) 
             <TableRow
               key={row.id}
               onClick={() => onPatientClick(row.original)}
-              className="cursor-pointer h-[52px] border-b border-border hover:bg-accent/50 transition-colors"
+              className="cursor-pointer h-[52px] border-b border-border hover:bg-accent/50 transition-colors group/row"
             >
               {row.getVisibleCells().map((cell) => (
                 <TableCell key={cell.id} className="text-foreground">
@@ -399,7 +679,7 @@ export function PatientsTableWithControls({
             <TableRow
               key={row.id}
               onClick={() => onPatientClick(row.original)}
-              className="cursor-pointer h-[52px] border-b border-border hover:bg-accent/50 transition-colors"
+              className="cursor-pointer h-[52px] border-b border-border hover:bg-accent/50 transition-colors group/row"
             >
               {row.getVisibleCells().map((cell) => (
                 <TableCell key={cell.id} className="text-foreground">
@@ -415,22 +695,36 @@ export function PatientsTableWithControls({
 }
 
 // Export the table hook for use in parent components
-export function usePatientsTable(patients: Patient[], onFilterBy?: OnFilterBy) {
+export function usePatientsTable(patients: Patient[], onFilterBy?: OnFilterBy, onStageClick?: OnStageClick, progressStyle: ProgressStyle = 'stepper', onPreviewPatient?: OnPreviewPatient, onOpenWorkflow?: (patient: Patient) => void) {
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
   const [columnOrder, setColumnOrder] = useState<ColumnOrderState>([]);
-  const [sorting, setSorting] = useState<SortingState>([]);
+  const [sorting, setSorting] = useState<SortingState>([{ id: 'status', desc: false }]);
   const [pagination, setPagination] = useState<PaginationState>({
     pageIndex: 0,
     pageSize: 10,
   });
 
-  // Use a ref so columns don't re-create on every render
+  // Use refs so columns don't re-create on every render
   const onFilterByRef = useRef(onFilterBy);
   onFilterByRef.current = onFilterBy;
+  const onStageClickRef = useRef(onStageClick);
+  onStageClickRef.current = onStageClick;
+  const onPreviewPatientRef = useRef(onPreviewPatient);
+  onPreviewPatientRef.current = onPreviewPatient;
+  const onOpenWorkflowRef = useRef(onOpenWorkflow);
+  onOpenWorkflowRef.current = onOpenWorkflow;
 
+  const hasPreview = !!onPreviewPatient;
+  const hasWorkflow = !!onOpenWorkflow;
   const cols = useMemo(
-    () => createColumns((...args) => onFilterByRef.current?.(...args)),
-    []
+    () => createColumns(
+      (...args) => onFilterByRef.current?.(...args),
+      (...args) => onStageClickRef.current?.(...args),
+      progressStyle,
+      hasPreview ? (patient) => onPreviewPatientRef.current?.(patient) : undefined,
+      hasWorkflow ? (patient) => onOpenWorkflowRef.current?.(patient) : undefined,
+    ),
+    [progressStyle, hasPreview, hasWorkflow]
   );
 
   const table = useReactTable({
@@ -514,7 +808,7 @@ export function PatientsTableContent({ table, onPatientClick }: PatientsTableCon
                 return (
                   <TableHead
                     key={header.id}
-                    style={header.column.columnDef.size !== 150 ? { width: header.getSize() } : undefined}
+                    style={{ width: header.getSize() }}
                     className={cn(
                       'text-muted-foreground font-medium h-full',
                       canSort && 'cursor-pointer select-none hover:text-foreground transition-colors'
@@ -558,10 +852,10 @@ export function PatientsTableContent({ table, onPatientClick }: PatientsTableCon
             <TableRow
               key={row.id}
               onClick={() => onPatientClick(row.original)}
-              className="cursor-pointer h-[52px] border-b border-border hover:bg-accent/50 transition-colors"
+              className="cursor-pointer h-[52px] border-b border-border hover:bg-accent/50 transition-colors group/row"
             >
               {row.getVisibleCells().map((cell) => (
-                <TableCell key={cell.id} style={cell.column.columnDef.size !== 150 ? { width: cell.column.getSize() } : undefined} className="text-foreground">
+                <TableCell key={cell.id} style={{ width: cell.column.getSize() }} className="text-foreground">
                   {flexRender(cell.column.columnDef.cell, cell.getContext())}
                 </TableCell>
               ))}

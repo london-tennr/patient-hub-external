@@ -18,10 +18,10 @@ const CATEGORY_CONFIG: {
   label: string;
   dotColor: string;
 }[] = [
-  { id: 'on_track', label: 'On Track', dotColor: 'bg-[#4a7a4a]' },
-  { id: 'action_required', label: 'Action Required', dotColor: 'bg-[#c5a24d]' },
-  { id: 'blocked', label: 'Blocked', dotColor: 'bg-[#b44a3a]' },
-  { id: 'closed', label: 'Archived', dotColor: 'bg-[#8a8a7e]' },
+  { id: 'on_track', label: 'In Progress', dotColor: 'bg-[#4a7a4a]' },
+  { id: 'action_required', label: 'Ready for Review', dotColor: 'bg-[#c5a24d]' },
+  { id: 'blocked', label: 'Blocked', dotColor: 'bg-[#ef4444]' },
+  { id: 'closed', label: 'Complete', dotColor: 'bg-[#c46a4a]' },
 ];
 
 interface PatientStatusBarProps {

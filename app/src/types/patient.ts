@@ -45,12 +45,35 @@ export interface Patient {
   status: PatientStatus;
   priority: PatientPriority;
   stage: PatientStage;
+  stageCompletedAt?: Partial<Record<PatientStage, string>>;
   runningStages?: PatientStage[];
+  referralDate: string;
   tennrStatus: 'in_queue' | 'processing' | 'completed' | 'idle';
   syncStatus: {
     ehrSystem: 'BrightTree' | 'WeInfuse' | 'Niko';
     lastSynced: string;
   };
+  lastActivity?: {
+    title: string;
+    timestamp: string;
+  };
+  order?: PatientOrder;
+}
+
+export interface PatientOrderDoc {
+  id: string;
+  name: string;
+  pages: number;
+}
+
+export interface PatientOrder {
+  id: string;
+  externalOrderId: string;
+  category: string;
+  referredBy: string;
+  receivedDate: string;
+  payer: string | null;
+  documents: PatientOrderDoc[];
 }
 
 export interface Insurance {

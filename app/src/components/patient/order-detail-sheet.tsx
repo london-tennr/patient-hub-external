@@ -20,7 +20,7 @@ const statusBadgeConfig: Record<
 > = {
   on_track: { label: 'On Track', variant: 'success' },
   missing_info: { label: 'Missing Info', variant: 'warning' },
-  needs_attention: { label: 'Ready for Review', variant: 'destructive' },
+  needs_attention: { label: 'Action Required', variant: 'destructive' },
   blocked: { label: 'Blocked', variant: 'destructive' },
   completed: { label: 'Completed', variant: 'muted' },
   inactive: { label: 'Inactive', variant: 'outline' },
@@ -134,12 +134,7 @@ export function OrderDetailSheet({ patient, open, onOpenChange }: OrderDetailShe
         </SheetTitle>
         {/* Header */}
         <div className="flex items-start justify-between px-6 pt-6 pb-4">
-          <div className="flex flex-col gap-0.5">
-            <h2 className="text-lg font-semibold text-text-primary">
-              {patient.firstName} {patient.lastName}, {formatDob(patient.dob)}
-            </h2>
-            <p className="text-sm text-text-tertiary">EHR ID MRN-{patient.mrn}</p>
-          </div>
+          <div className="flex flex-col gap-0.5" />
           <button
             onClick={() => onOpenChange(false)}
             className="flex items-center justify-center size-8 rounded-md hover:bg-bg-secondary transition-colors cursor-pointer"

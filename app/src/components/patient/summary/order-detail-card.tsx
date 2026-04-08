@@ -8,11 +8,11 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@tennr/lasso/tabs';
 import { cn } from '@tennr/lasso/utils/cn';
 import type { Order, OrderStage, OrderStatus } from '@/types/order';
 
-const statusBadgeConfig: Record<OrderStatus, { label: string; variant: 'success' | 'warning' | 'destructive' | 'outline' }> = {
+const statusBadgeConfig: Record<OrderStatus, { label: string; variant: 'success' | 'warning' | 'outline' | 'muted' }> = {
   on_track: { label: 'On Track', variant: 'success' },
   missing_info: { label: 'Missing Info', variant: 'warning' },
-  rejected: { label: 'Rejected', variant: 'destructive' },
-  completed: { label: 'Completed', variant: 'outline' },
+  rejected: { label: 'Rejected', variant: 'outline' },
+  completed: { label: 'Completed', variant: 'muted' },
 };
 
 const stages: { id: OrderStage; label: string }[] = [
@@ -102,7 +102,7 @@ export function OrderDetailCard({ orders }: OrderDetailCardProps) {
       {/* Order selector */}
       <div className="px-4 pb-3">
         <div className="flex items-center justify-between">
-          <span className="text-lg font-medium text-text-primary">Order</span>
+          <span className="text-base font-medium lasso:wght-medium leading-6 text-text-primary">Order</span>
           <span className="text-sm text-text-secondary">Received {formatTimeAgo(order.dateCreated)}</span>
         </div>
 

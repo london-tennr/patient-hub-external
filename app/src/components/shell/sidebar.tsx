@@ -9,20 +9,25 @@ import {
   CaretDoubleRight,
   MagnifyingGlass,
   Users,
-  UsersThree,
-  UserGear,
-  Rows,
-  Tag,
-  Gear,
   CaretUpDown,
   Question,
-  TreeStructure,
-  Table,
-  Key,
-  Function,
-  Robot,
-  CreditCard,
+  DesktopTower,
+  Wrench,
+  ClockCounterClockwise,
+  Bell,
+  ChartLineUp,
   FileText,
+  UsersFour,
+  Gear,
+  TreeStructure,
+  Phone,
+  Stethoscope,
+  CreditCard,
+  Tag,
+  UserCircleGear,
+  Faders,
+  Robot,
+  UsersThree,
 } from '@phosphor-icons/react';
 import { cn } from '@tennr/lasso/utils/cn';
 import { Avatar, AvatarImage, AvatarFallback } from '@tennr/lasso/avatar';
@@ -38,6 +43,7 @@ interface NavItem {
   href: string;
   icon: React.ElementType;
   disabled?: boolean;
+  badge?: number;
 }
 
 interface NavGroup {
@@ -51,7 +57,6 @@ export function Sidebar({ collapsed = false, onCollapsedChange }: SidebarProps) 
   const userButtonRef = React.useRef<HTMLButtonElement>(null);
 
   const triggerSearch = React.useCallback(() => {
-    // Dispatch ⌘K keyboard event to trigger CommandPalette
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', metaKey: true }));
   }, []);
 
@@ -59,11 +64,40 @@ export function Sidebar({ collapsed = false, onCollapsedChange }: SidebarProps) 
     {
       label: 'Main',
       items: [
-        {
-          label: 'Patient Hub',
-          href: '/explore',
-          icon: Users,
-        },
+        { label: 'My Workspace', href: '/workspace', icon: DesktopTower, disabled: true },
+        { label: 'Workers', href: '/workers', icon: Wrench, disabled: true },
+        { label: 'Patient Hub', href: '/explore', icon: Users },
+        { label: 'Historical View', href: '/historical', icon: ClockCounterClockwise, disabled: true },
+        { label: 'Notifications', href: '/notifications', icon: Bell, badge: 1, disabled: true },
+        { label: 'Analytics', href: '/analytics', icon: ChartLineUp, disabled: true },
+        { label: 'Help Center', href: '/help', icon: FileText, disabled: true },
+      ],
+    },
+    {
+      label: 'Workflow',
+      items: [
+        { label: 'Workspace Dashboard', href: '/workflows', icon: UserCircleGear, disabled: true },
+        { label: 'Autopilot', href: '/autopilot', icon: Robot, disabled: true },
+      ],
+    },
+    {
+      label: 'Management',
+      items: [
+        { label: 'Team', href: '/team', icon: UsersThree, disabled: true },
+        { label: 'Patient Pipeline', href: '/patients', icon: UsersFour, disabled: true },
+        { label: 'Phone Calling', href: '/phone', icon: Phone, disabled: true },
+        { label: 'Referring', href: '/referring', icon: Stethoscope, disabled: true },
+        { label: 'Offerings', href: '/offerings', icon: Tag, disabled: true },
+        { label: 'Qualifications', href: '/qualifications', icon: Users, disabled: true },
+        { label: 'Payers', href: '/payers', icon: CreditCard, disabled: true },
+        { label: 'Document Labeling', href: '/document-labeling', icon: Faders, disabled: true },
+        { label: 'Settings', href: '/settings', icon: Gear, disabled: true },
+      ],
+    },
+    {
+      label: 'Configuration',
+      items: [
+        { label: 'Workflows', href: '/config/workflows', icon: TreeStructure, disabled: true },
       ],
     },
   ];
@@ -105,7 +139,7 @@ export function Sidebar({ collapsed = false, onCollapsedChange }: SidebarProps) 
           {!collapsed && (
             <div className="flex flex-col items-start">
               <span className="text-sm font-semibold text-[var(--neutral-11)]">
-                Best Doctors
+                DMEPOS Factory
               </span>
             </div>
           )}
@@ -144,7 +178,7 @@ export function Sidebar({ collapsed = false, onCollapsedChange }: SidebarProps) 
       </div>
 
       {/* Sidebar Content */}
-      <div className="flex-1 flex flex-col gap-2 px-2 overflow-y-auto">
+      <div className="flex-1 flex flex-col gap-1 px-2 overflow-y-auto">
         {/* Expand button when collapsed */}
         {collapsed && (
           <button
@@ -157,11 +191,11 @@ export function Sidebar({ collapsed = false, onCollapsedChange }: SidebarProps) 
         )}
 
         {navGroups.map((group) => (
-          <div key={group.label} className="flex flex-col gap-1">
+          <div key={group.label} className="flex flex-col gap-0.5">
             {/* Group Label */}
             {!collapsed && group.label !== 'Main' && (
-              <div className="px-2 py-2">
-                <span className="text-xs font-medium text-[var(--neutral-11)] uppercase tracking-wide font-mono">
+              <div className="px-2 pt-4 pb-1">
+                <span className="text-xs font-medium text-[var(--neutral-9)] uppercase tracking-wide">
                   {group.label}
                 </span>
               </div>
@@ -178,14 +212,21 @@ export function Sidebar({ collapsed = false, onCollapsedChange }: SidebarProps) 
                     <div
                       key={item.label}
                       className={cn(
-                        'flex items-center gap-2 rounded-md text-sm font-normal transition-colors opacity-50 cursor-not-allowed',
-                        collapsed ? 'justify-center p-2' : 'px-2 py-2',
+                        'flex items-center gap-2.5 rounded-md text-sm font-normal transition-colors cursor-default',
+                        collapsed ? 'justify-center p-2' : 'px-2 py-1.5',
                         'text-[var(--neutral-11)]'
                       )}
                       title={collapsed ? item.label : undefined}
                     >
-                      <Icon className="w-4 h-4 shrink-0" />
-                      {!collapsed && <span className="truncate">{item.label}</span>}
+                      <Icon className="w-5 h-5 shrink-0" />
+                      {!collapsed && (
+                        <span className="truncate flex-1">{item.label}</span>
+                      )}
+                      {!collapsed && item.badge && (
+                        <span className="bg-[#8B4533] text-white text-xs font-medium rounded-full w-5 h-5 flex items-center justify-center">
+                          {item.badge}
+                        </span>
+                      )}
                     </div>
                   );
                 }
@@ -195,16 +236,23 @@ export function Sidebar({ collapsed = false, onCollapsedChange }: SidebarProps) 
                     key={item.label}
                     href={item.href}
                     className={cn(
-                      'flex items-center gap-2 rounded-md text-sm font-normal transition-colors',
-                      collapsed ? 'justify-center p-2' : 'px-2 py-2',
+                      'flex items-center gap-2.5 rounded-md text-sm font-normal transition-colors',
+                      collapsed ? 'justify-center p-2' : 'px-2 py-1.5',
                       isActive
-                        ? 'bg-[var(--neutral-5)] text-[var(--neutral-12)]'
+                        ? 'bg-[var(--neutral-5)] text-[var(--neutral-12)] font-medium'
                         : 'text-[var(--neutral-11)] hover:bg-[var(--neutral-4)] hover:text-[var(--neutral-12)]'
                     )}
                     title={collapsed ? item.label : undefined}
                   >
-                    <Icon className="w-4 h-4 shrink-0" />
-                    {!collapsed && <span className="truncate">{item.label}</span>}
+                    <Icon className={cn('w-5 h-5 shrink-0', isActive && 'text-[var(--neutral-12)]')} />
+                    {!collapsed && (
+                      <span className="truncate flex-1">{item.label}</span>
+                    )}
+                    {!collapsed && item.badge && (
+                      <span className="bg-[#8B4533] text-white text-xs font-medium rounded-full w-5 h-5 flex items-center justify-center">
+                        {item.badge}
+                      </span>
+                    )}
                   </Link>
                 );
               })}
@@ -231,7 +279,7 @@ export function Sidebar({ collapsed = false, onCollapsedChange }: SidebarProps) 
             >
               <Avatar className="w-8 h-8">
                 <AvatarImage src="/images/avatar.png" alt="User avatar" />
-                <AvatarFallback>AA</AvatarFallback>
+                <AvatarFallback>LZ</AvatarFallback>
               </Avatar>
             </button>
           </div>
@@ -243,14 +291,14 @@ export function Sidebar({ collapsed = false, onCollapsedChange }: SidebarProps) 
           >
             <Avatar className="w-8 h-8 shrink-0">
               <AvatarImage src="/images/avatar.png" alt="User avatar" />
-              <AvatarFallback>AA</AvatarFallback>
+              <AvatarFallback>LZ</AvatarFallback>
             </Avatar>
             <div className="flex-1 text-left min-w-0">
               <div className="text-sm font-semibold text-[var(--neutral-12)] truncate">
-                Alex Apple
+                London Zhang
               </div>
               <div className="text-xs text-[var(--neutral-9)] truncate">
-                adam@tennr.com
+                london.zhang@tennr.com
               </div>
             </div>
             <CaretUpDown className="w-4 h-4 text-[var(--neutral-9)]" />

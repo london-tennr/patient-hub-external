@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { ArrowRight } from '@phosphor-icons/react';
 import { cn } from '@tennr/lasso/utils/cn';
 import { Popover, PopoverContent, PopoverTrigger } from '@tennr/lasso/popover';
 import type { PatientStatus, PatientStage } from '@/types/patient';
@@ -48,19 +49,14 @@ const statusConfigs: StatusConfig[] = [
       icon: 'text-blue-500',
       pulse: 'bg-blue-400',
     },
-    icon: (
-      <svg className="w-3.5 h-3.5 animate-spin" viewBox="0 0 24 24" fill="none">
-        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3"/>
-        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"/>
-      </svg>
-    ),
+    icon: null,
     cta: null,
   },
   {
     id: 'action',
-    label: 'Ready for Review',
+    label: 'Action Required',
     sublabel: 'Your input is required',
-    description: 'This patient is ready for your review before Tennr can continue.',
+    description: 'This patient is ready for your review before Tennr can continue processing.',
     color: {
       bg: 'bg-amber-50',
       border: 'border-amber-200',
@@ -79,9 +75,9 @@ const statusConfigs: StatusConfig[] = [
   },
   {
     id: 'error',
-    label: 'Platform Issue',
+    label: 'Blocked',
     sublabel: 'Tennr is on it',
-    description: "Tennr is aware of this issue and is actively working on a fix. No action needed on your end.",
+    description: "We're working on resolving this blocker, which may cause a delay. No action needed on your end.",
     color: {
       bg: 'bg-neutral-50',
       border: 'border-neutral-200',
@@ -91,13 +87,7 @@ const statusConfigs: StatusConfig[] = [
       icon: 'text-neutral-400',
       pulse: 'bg-neutral-300',
     },
-    icon: (
-      <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-        <circle cx="12" cy="12" r="10"/>
-        <line x1="12" y1="8" x2="12" y2="12" strokeLinecap="round"/>
-        <line x1="12" y1="16" x2="12.01" y2="16" strokeLinecap="round"/>
-      </svg>
-    ),
+    icon: null,
     cta: null,
   },
   {
@@ -114,11 +104,7 @@ const statusConfigs: StatusConfig[] = [
       icon: 'text-emerald-500',
       pulse: 'bg-emerald-400',
     },
-    icon: (
-      <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7"/>
-      </svg>
-    ),
+    icon: null,
     cta: null,
   },
 ];
@@ -145,14 +131,14 @@ export function getStatusConfig(status: PatientStatus): StatusConfig {
 }
 
 /** Inline badge for table rows — with rich popover for action/error/processing states */
-export function PatientStatusBadge({ status, stage, onOpenWorkflow }: { status: PatientStatus; stage?: PatientStage; onOpenWorkflow?: () => void }) {
+export function PatientStatusBadge({ status, stage, onOpenWorkflow, disablePopover, actionCount, actionItems, onSelectAction }: { status: PatientStatus; stage?: PatientStage; onOpenWorkflow?: () => void; disablePopover?: boolean; actionCount?: number; actionItems?: { id: string; label: string; description?: string }[]; onSelectAction?: (actionId: string) => void }) {
   const s = getStatusConfig(status);
   const id = getStatusConfigId(status);
   const [open, setOpen] = useState(false);
 
   const badge = (
     <span className={cn('inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium cursor-default', s.color.badge)}>
-      <span className={s.color.icon}>{s.icon}</span>
+      {s.icon && <span className={s.color.icon}>{s.icon}</span>}
       {s.label}
     </span>
   );
@@ -190,23 +176,21 @@ export function PatientStatusBadge({ status, stage, onOpenWorkflow }: { status: 
     );
   }
 
-  // Action needed — popover with "Open workflow" button
+  // Action needed — popover with list of action items
   if (id === 'action') {
     const actionBadge = (
       <span className={cn('inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium cursor-default', s.color.badge)}>
-        <span className="relative flex size-2.5 items-center justify-center">
-          <span className="absolute inline-flex size-2.5 rounded-full bg-amber-400 opacity-50 animate-ping" />
-          <span className="relative inline-flex size-[7px] rounded-full bg-amber-500" />
-        </span>
         {s.label}
       </span>
     );
+
+    if (disablePopover) return actionBadge;
 
     return (
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <button
-            className="cursor-pointer"
+            className="cursor-pointer outline-none focus:outline-none"
             onMouseEnter={() => setOpen(true)}
             onMouseLeave={() => setOpen(false)}
             onClick={(e) => e.stopPropagation()}
@@ -217,44 +201,48 @@ export function PatientStatusBadge({ status, stage, onOpenWorkflow }: { status: 
         <PopoverContent
           side="bottom"
           align="start"
-          className="w-[260px] p-0"
+          className="w-[300px] p-0"
           onMouseEnter={() => setOpen(true)}
           onMouseLeave={() => setOpen(false)}
         >
           <div className="px-3.5 pt-3 pb-2">
-            <p className="text-sm font-semibold text-text-primary">Ready for review</p>
-            <p className="text-xs text-text-secondary mt-1">
-              This patient is ready for your review before Tennr can continue processing.
-            </p>
+            <p className="text-sm font-semibold text-text-primary">Action required</p>
+            {actionItems && actionItems.length > 0 ? (
+              <p className="text-xs text-text-secondary mt-1">{actionItems[0].label}</p>
+            ) : (
+              <p className="text-xs text-text-secondary mt-1">This patient needs your attention.</p>
+            )}
           </div>
-          <div className="border-t border-border-secondary px-3.5 py-2">
+          <div className="border-t border-border-secondary px-3.5 py-2.5">
             <button
               onClick={(e) => {
                 e.stopPropagation();
                 setOpen(false);
-                onOpenWorkflow?.();
+                if (actionItems && actionItems.length > 0) {
+                  onSelectAction?.(actionItems[0].id);
+                  if (!onSelectAction) onOpenWorkflow?.();
+                } else {
+                  onOpenWorkflow?.();
+                }
               }}
-              className="flex items-center gap-1.5 text-xs font-medium text-text-primary hover:text-text-secondary transition-colors cursor-pointer"
+              className="text-xs font-medium text-text-primary hover:text-text-secondary transition-colors cursor-pointer outline-none focus:outline-none"
             >
-              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
-              </svg>
-              Open workflow
+              View <ArrowRight className="w-3 h-3 inline-block ml-0.5" />
             </button>
-          </div>
+            </div>
         </PopoverContent>
       </Popover>
     );
   }
 
-  // Platform issue — gray badge with popover reassuring user
+  // Blocked — gray badge with popover reassuring user
   if (id === 'error') {
     const grayBadge = (
       <span className={cn(
-        'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium cursor-default',
-        'bg-neutral-100 text-neutral-600',
+        'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium cursor-default transition-colors',
+        'bg-bg-error-primary text-text-error-secondary',
       )}>
-        <span className="text-neutral-500">{s.icon}</span>
+        {s.icon && <span className="text-neutral-500">{s.icon}</span>}
         {s.label}
       </span>
     );
@@ -279,9 +267,9 @@ export function PatientStatusBadge({ status, stage, onOpenWorkflow }: { status: 
           onMouseLeave={() => setOpen(false)}
         >
           <div className="px-3.5 pt-3 pb-3">
-            <p className="text-sm font-semibold text-text-primary">Platform issue</p>
+            <p className="text-sm font-semibold text-text-primary">Blocked</p>
             <p className="text-xs text-text-secondary mt-1">
-              Tennr is aware of this issue and is actively working on a fix. No action needed on your end.
+              We're working on resolving this blocker, which may cause a delay. No action needed on your end.
             </p>
           </div>
         </PopoverContent>

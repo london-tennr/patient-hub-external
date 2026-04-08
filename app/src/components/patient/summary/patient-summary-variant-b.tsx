@@ -4,6 +4,7 @@ import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react'
 import {
   SidebarSimple,
   CaretLeft,
+  CaretRight,
   CaretDown,
   Copy,
   Check,
@@ -22,6 +23,15 @@ import {
   DownloadSimple,
   LockSimple,
   ArrowSquareOut,
+  MagnifyingGlass,
+  FunnelSimple,
+  CaretUp,
+  Package,
+  UserCircle,
+  Stethoscope,
+  Database,
+  NotePencil,
+  PlusCircle,
 } from '@phosphor-icons/react';
 import {
   Tabs,
@@ -32,6 +42,7 @@ import {
 import { Button } from '@tennr/lasso/button';
 import { Badge } from '@tennr/lasso/badge';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@tennr/lasso/tooltip';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@tennr/lasso/table';
 import { cn } from '@tennr/lasso/utils/cn';
 import type { Patient, Insurance, PatientStage } from '@/types/patient';
 import type { Order, OrderDocument, OrderStatus, OrderStage } from '@/types/order';
@@ -52,7 +63,7 @@ import { WorkflowSheet } from '../workflow-sheet';
 
 interface TimelineActivity {
   id: string;
-  type: 'verification' | 'document' | 'referral' | 'order_complete' | 'prior_auth' | 'comment';
+  type: 'ehr_log' | 'order_update' | 'order_created' | 'patient_update' | 'patient_created' | 'note' | 'prior_auth' | 'eligibility_benefits';
   title: string;
   description?: string;
   orderId?: string;
@@ -216,6 +227,317 @@ function RunCard({ run, patientName }: { run: RunEntry; patientName: string }) {
   );
 }
 
+const orderStatusLabel: Record<OrderStatus, string> = {
+  on_track: 'On Track',
+  missing_info: 'Action Required',
+  rejected: 'Rejected',
+  completed: 'Completed',
+};
+
+const orderStatusVariant: Record<OrderStatus, 'success' | 'warning' | 'outline' | 'muted'> = {
+  on_track: 'success',
+  missing_info: 'warning',
+  rejected: 'outline',
+  completed: 'muted',
+};
+
+const orderStageLabel: Record<OrderStage, string> = {
+  validation: 'Validation',
+  eligibility: 'Eligibility',
+  qualification: 'Qualification',
+  complete: 'Complete',
+};
+
+function formatOrderDate(dateStr: string): string {
+  const date = new Date(dateStr + 'T00:00:00');
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+function formatOrderAge(dateStr: string): string {
+  const date = new Date(dateStr + 'T00:00:00');
+  const now = new Date();
+  const diffDays = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
+  if (diffDays === 0) return 'Today';
+  if (diffDays === 1) return '1 day ago';
+  return `${diffDays} days ago`;
+}
+
+type OrderFilterStatus = 'all' | OrderStatus;
+
+type SortColumn = 'orderName' | 'status' | 'stage' | 'statusUpdated' | 'orderAge' | 'facility';
+type SortDirection = 'asc' | 'desc';
+
+function OrdersTabContent({ orders, onSelectOrder }: { orders: Order[]; onSelectOrder: (order: Order) => void }) {
+  const [searchValue, setSearchValue] = useState('');
+  const [statusFilter, setStatusFilter] = useState<OrderFilterStatus>('all');
+  const [isFilterVisible, setIsFilterVisible] = useState(false);
+  const [sortColumn, setSortColumn] = useState<SortColumn>('orderAge');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
+  const [page, setPage] = useState(0);
+  const ORDERS_PER_PAGE = 10;
+
+  const handleSort = useCallback((column: SortColumn) => {
+    if (sortColumn === column) {
+      setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortColumn(column);
+      setSortDirection('desc');
+    }
+  }, [sortColumn]);
+
+  const filtered = useMemo(() => {
+    let result = [...orders];
+
+    // Status filter
+    if (statusFilter !== 'all') {
+      result = result.filter(o => o.status === statusFilter);
+    }
+
+    // Search
+    if (searchValue.trim()) {
+      const q = searchValue.toLowerCase();
+      result = result.filter(o =>
+        o.orderName.toLowerCase().includes(q) ||
+        o.externalOrderId.toLowerCase().includes(q) ||
+        (o.referringFacility ?? '').toLowerCase().includes(q) ||
+        (o.referringPractitioner ?? '').toLowerCase().includes(q)
+      );
+    }
+
+    // Sort by selected column
+    const dir = sortDirection === 'asc' ? 1 : -1;
+    result.sort((a, b) => {
+      switch (sortColumn) {
+        case 'orderName':
+          return dir * a.orderName.localeCompare(b.orderName);
+        case 'status':
+          return dir * (orderStatusLabel[a.status] ?? '').localeCompare(orderStatusLabel[b.status] ?? '');
+        case 'stage':
+          return dir * (orderStageLabel[a.stage] ?? '').localeCompare(orderStageLabel[b.stage] ?? '');
+        case 'statusUpdated':
+          return dir * (new Date(a.statusUpdated).getTime() - new Date(b.statusUpdated).getTime());
+        case 'orderAge':
+          return dir * (new Date(a.dateCreated).getTime() - new Date(b.dateCreated).getTime());
+        case 'facility':
+          return dir * (a.referringFacility ?? '').localeCompare(b.referringFacility ?? '');
+        default:
+          return 0;
+      }
+    });
+
+    return result;
+  }, [orders, searchValue, statusFilter, sortColumn, sortDirection]);
+
+  // Reset page when filters change
+  useEffect(() => { setPage(0); }, [searchValue, statusFilter]);
+
+  const totalPages = Math.ceil(filtered.length / ORDERS_PER_PAGE);
+  const pagedOrders = filtered.slice(page * ORDERS_PER_PAGE, (page + 1) * ORDERS_PER_PAGE);
+
+  const statusFilterOptions: { value: OrderFilterStatus; label: string }[] = [
+    { value: 'all', label: 'All' },
+    { value: 'on_track', label: 'On Track' },
+    { value: 'missing_info', label: 'Action Required' },
+    { value: 'rejected', label: 'Rejected' },
+    { value: 'completed', label: 'Completed' },
+  ];
+
+  return (
+    <div className="flex flex-col w-full border border-border-tertiary rounded-md overflow-hidden bg-bg-white shadow-xs">
+      {/* Top bar: Search + Filter toggle */}
+      <div className="flex flex-col w-full border-b border-border-tertiary">
+        <div className="flex items-center w-full p-2 gap-4 bg-bg-white">
+          <div className="flex-1 flex items-center h-full gap-2">
+            <div className="bg-neutral-2 flex items-center gap-1 px-3 py-1 rounded-sm shadow-xs flex-1 h-8">
+              <div className="size-4 shrink-0 flex items-center justify-center">
+                <MagnifyingGlass weight="regular" className="text-text-tertiary w-full h-full" />
+              </div>
+              <input
+                type="text"
+                value={searchValue}
+                onChange={(e) => setSearchValue(e.target.value)}
+                placeholder="Search by order name, ID, facility, or practitioner"
+                className="flex-1 bg-transparent border-none outline-none text-sm text-text-primary placeholder:text-text-tertiary font-body h-full leading-[20px]"
+              />
+              {searchValue.length > 0 && (
+                <button
+                  onClick={() => setSearchValue('')}
+                  className="size-4 shrink-0 flex items-center justify-center rounded-sm hover:bg-bg-secondary transition-colors cursor-pointer"
+                >
+                  <XIcon weight="bold" className="size-3 text-text-tertiary" />
+                </button>
+              )}
+            </div>
+          </div>
+          <button
+            onClick={() => setIsFilterVisible(!isFilterVisible)}
+            className={cn(
+              'flex items-center justify-center size-7 rounded-full border border-border-secondary bg-bg-white shadow-xs hover:bg-bg-secondary transition-colors cursor-pointer',
+              isFilterVisible && 'bg-bg-secondary'
+            )}
+          >
+            <FunnelSimple weight="regular" className="w-4 h-4 text-text-primary" />
+          </button>
+        </div>
+
+        {/* Filter bar */}
+        {isFilterVisible && (
+          <div className="flex items-center gap-1.5 px-2 py-1.5 bg-bg-white border-t border-border-tertiary">
+            {statusFilterOptions.map((opt) => (
+              <button
+                key={opt.value}
+                onClick={() => setStatusFilter(opt.value)}
+                className={cn(
+                  'px-2.5 py-1 rounded-md text-xs font-medium transition-colors cursor-pointer',
+                  statusFilter === opt.value
+                    ? 'bg-bg-black-solid text-text-white'
+                    : 'text-text-secondary hover:bg-bg-secondary'
+                )}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Table */}
+      {filtered.length === 0 ? (
+        <div className="px-4 py-12 text-center text-sm text-text-tertiary">
+          No orders match your search
+        </div>
+      ) : (
+        <Table className="table-fixed w-full">
+          <TableHeader>
+            <TableRow className="bg-bg-secondary h-10 border-b border-border hover:bg-bg-secondary">
+              {([
+                { key: 'orderName' as SortColumn, label: 'Order type', sortable: false },
+                { key: 'status' as SortColumn, label: 'Status', sortable: false },
+                { key: 'stage' as SortColumn, label: 'Stage', sortable: false },
+                { key: 'statusUpdated' as SortColumn, label: 'Status updated', sortable: false },
+                { key: 'orderAge' as SortColumn, label: 'Order age', sortable: true },
+                { key: 'facility' as SortColumn, label: 'Facility and Practitioner', sortable: false },
+              ]).map((col) => (
+                <TableHead
+                  key={col.key}
+                  className={cn(
+                    'text-muted-foreground font-medium h-full',
+                    col.sortable && 'cursor-pointer select-none hover:text-foreground transition-colors'
+                  )}
+                  onClick={col.sortable ? () => handleSort(col.key) : undefined}
+                >
+                  <div className="flex items-center gap-1">
+                    {col.label}
+                    {col.sortable && (
+                      <span className="flex flex-col -space-y-1">
+                        <CaretUp
+                          weight="bold"
+                          className={cn(
+                            'size-3',
+                            sortColumn === col.key && sortDirection === 'asc' ? 'text-foreground' : 'text-muted-foreground/40'
+                          )}
+                        />
+                        <CaretDown
+                          weight="bold"
+                          className={cn(
+                            'size-3',
+                            sortColumn === col.key && sortDirection === 'desc' ? 'text-foreground' : 'text-muted-foreground/40'
+                          )}
+                        />
+                      </span>
+                    )}
+                  </div>
+                </TableHead>
+              ))}
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {pagedOrders.map((order) => (
+              <TableRow
+                key={order.id}
+                onClick={() => onSelectOrder(order)}
+                className="cursor-pointer h-[52px] border-b border-border hover:bg-accent/50 transition-colors"
+              >
+                <TableCell className="text-foreground">
+                  <span className="text-sm font-medium">{order.orderName}</span>
+                </TableCell>
+                <TableCell className="text-foreground">
+                  <Badge variant={orderStatusVariant[order.status]} className="text-xs">
+                    {orderStatusLabel[order.status]}
+                  </Badge>
+                </TableCell>
+                <TableCell className="text-foreground">
+                  <span className="text-sm text-text-secondary">{orderStageLabel[order.stage]}</span>
+                </TableCell>
+                <TableCell className="text-foreground">
+                  <span className="text-sm text-text-secondary">{formatOrderAge(order.statusUpdated)}</span>
+                </TableCell>
+                <TableCell className="text-foreground">
+                  <span className="text-sm text-text-secondary">{order.orderAge}</span>
+                </TableCell>
+                <TableCell className="text-foreground">
+                  <div className="flex flex-col gap-0.5 min-w-0">
+                    <span className="text-sm font-medium text-text-primary truncate">
+                      {order.referringFacility ?? '—'}
+                    </span>
+                    <span className="text-xs text-text-tertiary uppercase tracking-wide truncate">
+                      {order.referringPractitioner ?? '—'}
+                    </span>
+                  </div>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      )}
+
+      {/* Pagination footer */}
+      {filtered.length > 0 && (
+        <div className="flex items-center justify-between px-4 py-3 border-t border-border">
+          <p className="text-sm text-text-secondary">
+            Showing {page * ORDERS_PER_PAGE + 1}-{Math.min((page + 1) * ORDERS_PER_PAGE, filtered.length)} of{' '}
+            {filtered.length} orders
+          </p>
+          {totalPages > 1 && (
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => setPage(p => Math.max(0, p - 1))}
+                disabled={page === 0}
+                className="flex items-center gap-1 px-2 py-1 text-sm text-text-secondary hover:text-text-primary disabled:opacity-40 disabled:pointer-events-none transition-colors cursor-pointer"
+              >
+                <CaretLeft weight="regular" className="size-3.5" />
+                Previous
+              </button>
+              {Array.from({ length: totalPages }, (_, i) => (
+                <button
+                  key={i}
+                  onClick={() => setPage(i)}
+                  className={cn(
+                    'flex items-center justify-center size-8 text-sm rounded-md transition-colors cursor-pointer',
+                    i === page
+                      ? 'border border-border-primary text-text-primary font-medium'
+                      : 'text-text-secondary hover:text-text-primary'
+                  )}
+                >
+                  {i + 1}
+                </button>
+              ))}
+              <button
+                onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
+                disabled={page === totalPages - 1}
+                className="flex items-center gap-1 px-2 py-1 text-sm text-text-secondary hover:text-text-primary disabled:opacity-40 disabled:pointer-events-none transition-colors cursor-pointer"
+              >
+                Next
+                <CaretRight weight="regular" className="size-3.5" />
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function RunsSection({ patient }: { patient: Patient }) {
   const runs = generateMockRuns(parseInt(patient.id) || 42);
   const fullName = `${patient.firstName} ${patient.lastName}`;
@@ -246,11 +568,112 @@ const stageStatusLabels: Record<string, string> = {
   current: 'In progress',
   running: 'Processing',
   blocked: 'Blocked',
-  attention: 'Ready for review',
+  attention: 'Action required',
   future: 'Pending',
 };
 
+function WorkerStatusIcon({ status }: { status: StepStatus }) {
+  switch (status) {
+    case 'completed':
+      return <CheckCircle weight="fill" className="size-4 text-emerald-500 shrink-0" />;
+    case 'running':
+    case 'current':
+      return <CircleNotch weight="bold" className="size-4 text-blue-500 animate-spin shrink-0" />;
+    case 'blocked':
+      return <WarningCircle weight="fill" className="size-4 text-neutral-400 shrink-0" />;
+    case 'attention':
+      return <WarningCircle weight="fill" className="size-4 text-amber-500 shrink-0" />;
+    case 'future':
+    default:
+      return <Circle weight="regular" className="size-4 text-border-secondary shrink-0" />;
+  }
+}
+
+function WorkerStatusLabel({ status }: { status: StepStatus }) {
+  const labelMap: Record<StepStatus, { text: string; className: string }> = {
+    completed: { text: 'Completed', className: 'text-emerald-600 bg-emerald-50' },
+    running: { text: 'Processing', className: 'text-blue-600 bg-blue-50' },
+    current: { text: 'Processing', className: 'text-blue-600 bg-blue-50' },
+    blocked: { text: 'Blocked', className: 'text-neutral-500 bg-neutral-100' },
+    attention: { text: 'Action Required', className: 'text-amber-600 bg-amber-50' },
+    future: { text: 'Pending', className: 'text-text-tertiary bg-bg-secondary' },
+  };
+  const config = labelMap[status];
+  return (
+    <span className={cn('text-[10px] font-medium px-1.5 py-0.5 rounded', config.className)}>
+      {config.text}
+    </span>
+  );
+}
+
+function formatActivityDate(timestamp: string) {
+  const ts = new Date(timestamp);
+  return ts.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' });
+}
+
+function formatActivityTime(timestamp: string) {
+  const ts = new Date(timestamp);
+  return ts.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+}
+
+function LastActivityCard({ activities }: { activities: TimelineActivity[] }) {
+  const recent = activities
+    .slice()
+    .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+    .slice(0, 10);
+
+  if (recent.length === 0) {
+    return (
+      <div className="bg-bg-white border border-border-tertiary rounded-md shadow-xs overflow-hidden">
+        <div className="flex items-center justify-between px-4 py-2">
+          <p className="text-base font-medium lasso:wght-medium leading-6 text-text-primary">Recent Activity</p>
+        </div>
+        <div className="px-4 py-2 border-t border-border-tertiary">
+          <p className="text-[13px] text-text-tertiary">No activity recorded</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-bg-white border border-border-tertiary rounded-md shadow-xs overflow-hidden">
+      <div className="flex items-center justify-between px-4 py-2">
+        <p className="text-base font-medium lasso:wght-medium leading-6 text-text-primary">Recent Activity</p>
+      </div>
+      <div className="border-t border-border-tertiary">
+        {recent.map((activity, i) => (
+          <div
+            key={activity.id}
+            className={cn(
+              'flex flex-col gap-0 px-3 py-2 hover:bg-accent/50 transition-colors',
+              i < recent.length - 1 && 'border-b border-border-tertiary',
+            )}
+          >
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-1.5 min-w-0">
+                <span className="text-[13px] font-medium lasso:wght-medium text-text-primary truncate">{activity.title}</span>
+                {(() => {
+                  const label = activity.source === 'user' && activity.author?.name ? activity.author.name : activity.source === 'tennr' ? 'Tennr' : activity.source === 'system' ? 'Integration' : '';
+                  return label ? <span className="text-[10px] text-text-tertiary shrink-0">· {label}</span> : null;
+                })()}
+              </div>
+              <span className="text-[11px] text-text-tertiary whitespace-nowrap shrink-0">
+                {formatActivityDate(activity.timestamp)}
+              </span>
+            </div>
+            {activity.description && (
+              <span className="text-[11px] text-text-secondary truncate">{activity.description}</span>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function ActiveStagesSection({ patient, onOpenWorkflow }: { patient: Patient; onOpenWorkflow?: () => void }) {
+  const [isWorkerListExpanded, setIsWorkerListExpanded] = useState(true);
+  const [hoveredStageIndex, setHoveredStageIndex] = useState<number | null>(null);
   const isBlocked = patient.status === 'blocked';
   const isAttention = patient.status === 'needs_attention' || patient.status === 'missing_info';
   const isCompleted = patient.status === 'completed';
@@ -283,16 +706,32 @@ function ActiveStagesSection({ patient, onOpenWorkflow }: { patient: Patient; on
       {/* Header */}
       <div className="px-4 py-2.5 flex items-center justify-between">
         <div className="flex items-center gap-2.5">
-          <p className="text-sm font-medium lasso:wght-medium text-text-primary">Patient Status</p>
-          <PatientStatusBadge status={patient.status} stage={patient.stage} onOpenWorkflow={onOpenWorkflow} />
+          <p className="text-base font-medium lasso:wght-medium leading-6 text-text-primary">Patient Status</p>
+          <PatientStatusBadge status={patient.status} stage={patient.stage} actionCount={patient.actionCount} actionItems={patient.actionItems} onOpenWorkflow={onOpenWorkflow} disablePopover />
         </div>
         <span className="text-[11px] text-text-tertiary">{completedCount}/{TOTAL_STAGES} stages</span>
       </div>
 
       {/* Status alert banner */}
       {(isBlocked || isAttention) && (
-        <div className={cn('px-4 py-2.5 border-t border-border-tertiary', statusConfig.color.bg)}>
+        <div className={cn('px-4 py-2.5 border-t border-border-tertiary flex items-center justify-between gap-3', statusConfig.color.bg)}>
           <p className={cn('text-xs', statusConfig.color.text)}>{statusConfig.description}</p>
+          {isAttention && onOpenWorkflow && (
+            <button
+              onClick={onOpenWorkflow}
+              className={cn('text-xs font-medium shrink-0 cursor-pointer hover:underline', statusConfig.color.text)}
+            >
+              Open tasks &rarr;
+            </button>
+          )}
+          {isBlocked && (
+            <a
+              href="/notifications"
+              className={cn('text-xs font-medium shrink-0 cursor-pointer hover:underline', statusConfig.color.text)}
+            >
+              Notification center &rarr;
+            </a>
+          )}
         </div>
       )}
 
@@ -303,51 +742,27 @@ function ActiveStagesSection({ patient, onOpenWorkflow }: { patient: Patient; on
             const status = getStepStatus(stage);
             const isStageCompleted = status === 'completed';
             const isRunning = status === 'running' || status === 'current';
-            const label = stageLabels[stage];
-            const description = stageDescriptions[stage];
-            const ts = patient.stageCompletedAt?.[stage];
-            const timestamp = ts
-              ? new Date(ts).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
-              : undefined;
 
             return (
               <div key={stage} className="flex items-center flex-1 last:flex-none">
-                {/* Dot with tooltip */}
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <button className="cursor-default shrink-0">
-                      {isRunning ? (
-                        <CircleNotch weight="bold" className="size-4 text-blue-500 animate-spin" />
-                      ) : (
-                        <span className={cn(
-                          'block size-3 rounded-full transition-colors',
-                          isStageCompleted ? (useGrayDefault ? 'bg-neutral-400 group-hover/dots:bg-emerald-500' : 'bg-emerald-500') :
-                          status === 'blocked' ? 'bg-neutral-400' :
-                          status === 'attention' ? 'bg-amber-500' :
-                          'bg-border-secondary',
-                        )} />
-                      )}
-                    </button>
-                  </TooltipTrigger>
-                  <TooltipContent side="bottom" align="center" className="max-w-[220px] p-0">
-                    <div className="px-3 pt-2.5 pb-2">
-                      <div className="flex items-center justify-between gap-3">
-                        <span className="text-xs font-semibold text-text-primary">{label}</span>
-                        <span className={cn(
-                          'text-[10px] shrink-0',
-                          isStageCompleted ? 'text-emerald-500' :
-                          isRunning ? 'text-blue-500' :
-                          status === 'blocked' ? 'text-neutral-500' :
-                          status === 'attention' ? 'text-amber-500' :
-                          'text-text-tertiary',
-                        )}>
-                          {timestamp ?? stageStatusLabels[status]}
-                        </span>
-                      </div>
-                      <p className="text-[11px] text-text-tertiary leading-4 mt-1">{description}</p>
-                    </div>
-                  </TooltipContent>
-                </Tooltip>
+                {/* Dot — hover highlights corresponding worker row */}
+                <button
+                  className="cursor-default shrink-0"
+                  onMouseEnter={() => setHoveredStageIndex(i)}
+                  onMouseLeave={() => setHoveredStageIndex(null)}
+                >
+                  {isRunning ? (
+                    <CircleNotch weight="bold" className="size-4 text-blue-500 animate-spin" />
+                  ) : (
+                    <span className={cn(
+                      'block size-3 rounded-full transition-colors',
+                      isStageCompleted ? (useGrayDefault ? 'bg-neutral-400 group-hover/dots:bg-emerald-500' : 'bg-emerald-500') :
+                      status === 'blocked' ? 'bg-neutral-400' :
+                      status === 'attention' ? 'bg-amber-500' :
+                      'bg-border-secondary',
+                    )} />
+                  )}
+                </button>
 
                 {/* Connector line */}
                 {i < stageOrder.length - 1 && (
@@ -361,6 +776,57 @@ function ActiveStagesSection({ patient, onOpenWorkflow }: { patient: Patient; on
           })}
         </div>
       </div>
+
+      {/* Worker Status Dropdown — expanded by default */}
+      <div className="border-t border-border-tertiary">
+        <button
+          onClick={() => setIsWorkerListExpanded(!isWorkerListExpanded)}
+          className="w-full flex items-center justify-between px-4 py-2.5 hover:bg-bg-secondary transition-colors cursor-pointer"
+        >
+          <span className="text-xs font-medium text-text-secondary">Worker Status</span>
+          <CaretDown
+            weight="bold"
+            className={cn(
+              'size-3.5 text-text-tertiary transition-transform duration-200',
+              isWorkerListExpanded && 'rotate-180'
+            )}
+          />
+        </button>
+
+        {isWorkerListExpanded && (
+          <div className="px-4 pb-3 flex flex-col gap-0.5">
+            {stageOrder.map((stage, i) => {
+              const status = getStepStatus(stage);
+              const label = stageLabels[stage];
+              const ts = patient.stageCompletedAt?.[stage];
+              const timestamp = ts
+                ? new Date(ts).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
+                : undefined;
+              const isHighlighted = hoveredStageIndex === i;
+              const isMuted = hoveredStageIndex !== null && hoveredStageIndex !== i;
+
+              return (
+                <div
+                  key={stage}
+                  className={cn(
+                    'flex items-center gap-3 px-2.5 py-2 rounded-md transition-all duration-150',
+                    isHighlighted && 'bg-bg-secondary ring-1 ring-border-primary',
+                    isMuted && 'opacity-30',
+                    !isHighlighted && !isMuted && 'hover:bg-bg-secondary',
+                  )}
+                >
+                  <WorkerStatusIcon status={status} />
+                  <span className="text-sm text-text-primary flex-1 min-w-0 truncate">{label}</span>
+                  {timestamp && (
+                    <span className="text-[10px] text-text-tertiary shrink-0">{timestamp}</span>
+                  )}
+                  <WorkerStatusLabel status={status} />
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -368,67 +834,66 @@ function ActiveStagesSection({ patient, onOpenWorkflow }: { patient: Patient; on
 // --- Sidebar detail views ---
 
 const activityIcon: Record<TimelineActivity['type'], React.ReactNode> = {
-  verification: <Heartbeat weight="regular" className="size-4 text-text-tertiary" />,
-  document: <FolderOpen weight="regular" className="size-4 text-text-tertiary" />,
-  referral: <FileText weight="regular" className="size-4 text-text-tertiary" />,
-  order_complete: <CheckCircle weight="regular" className="size-4 text-text-success-primary" />,
+  ehr_log: <Database weight="regular" className="size-4 text-text-tertiary" />,
+  order_update: <Package weight="regular" className="size-4 text-text-tertiary" />,
+  order_created: <PlusCircle weight="regular" className="size-4 text-text-tertiary" />,
+  patient_update: <UserCircle weight="regular" className="size-4 text-text-tertiary" />,
+  patient_created: <PlusCircle weight="regular" className="size-4 text-text-tertiary" />,
+  note: <NotePencil weight="regular" className="size-4 text-text-tertiary" />,
   prior_auth: <ShieldCheck weight="regular" className="size-4 text-text-tertiary" />,
-  comment: <FileText weight="regular" className="size-4 text-text-tertiary" />,
+  eligibility_benefits: <Stethoscope weight="regular" className="size-4 text-text-tertiary" />,
 };
 
 const activityTypeLabel: Record<TimelineActivity['type'], string> = {
-  verification: 'Insurance Verification',
-  document: 'Document Upload',
-  referral: 'Referral',
-  order_complete: 'Order Completion',
-  prior_auth: 'Prior Authorization',
-  comment: 'Comment',
+  ehr_log: 'EHR Audit',
+  order_update: 'Order Update',
+  order_created: 'Order Created',
+  patient_update: 'Patient Update',
+  patient_created: 'Patient Created',
+  note: 'Note',
+  prior_auth: 'Prior Auth',
+  eligibility_benefits: 'E&B',
 };
 
 const activityTypeBadgeVariant: Record<TimelineActivity['type'], 'outline'> = {
-  verification: 'outline',
-  document: 'outline',
-  referral: 'outline',
-  order_complete: 'outline',
+  ehr_log: 'outline',
+  order_update: 'outline',
+  order_created: 'outline',
+  patient_update: 'outline',
+  patient_created: 'outline',
+  note: 'outline',
   prior_auth: 'outline',
-  comment: 'outline',
+  eligibility_benefits: 'outline',
 };
 
 const activityDetails: Record<TimelineActivity['type'], { description: string; fields: { label: string; value: string }[] }> = {
-  verification: {
-    description: 'An automated insurance verification check was initiated to confirm patient eligibility and benefits coverage with the carrier on file.',
+  order_update: {
+    description: 'An order was updated for this patient.',
     fields: [
-      { label: 'Carrier', value: 'Aetna' },
-      { label: 'Plan Type', value: 'PPO' },
-      { label: 'Verification Method', value: 'Electronic (270/271)' },
-      { label: 'Initiated By', value: 'System — Auto Trigger' },
-    ],
-  },
-  document: {
-    description: 'A document was uploaded and attached to the patient record.',
-    fields: [
-      { label: 'Document Type', value: 'Insurance Card' },
-      { label: 'Uploaded By', value: 'Patient Portal' },
-      { label: 'File Format', value: 'PDF' },
-      { label: 'Pages', value: '2' },
-    ],
-  },
-  referral: {
-    description: 'A referral was received from an external provider and linked to the relevant order.',
-    fields: [
-      { label: 'Referring Provider', value: 'PresNow Urgent Care' },
-      { label: 'Provider NPI', value: '1234567890' },
-      { label: 'Referral Type', value: 'DME Referral' },
-      { label: 'Received Via', value: 'eFax' },
-    ],
-  },
-  order_complete: {
-    description: 'The order has been fully processed and a claim has been submitted.',
-    fields: [
-      { label: 'Claim Number', value: 'CLM-2026-04821' },
+      { label: 'Order Number', value: 'ORD-4821' },
+      { label: 'Status', value: 'Completed' },
       { label: 'Submitted To', value: 'Aetna' },
       { label: 'Total Billed', value: '$1,247.00' },
-      { label: 'Expected Reimbursement', value: '$998.40' },
+    ],
+  },
+  order_created: {
+    description: 'A new order was created for this patient.',
+    fields: [
+      { label: 'Order Number', value: 'ORD-4821' },
+      { label: 'Type', value: 'CPAP Device' },
+    ],
+  },
+  patient_update: {
+    description: 'Patient information was updated in the system.',
+    fields: [
+      { label: 'Updated By', value: 'System' },
+      { label: 'Fields Changed', value: 'Demographics' },
+    ],
+  },
+  patient_created: {
+    description: 'Patient record was created in the system.',
+    fields: [
+      { label: 'Created By', value: 'System' },
     ],
   },
   prior_auth: {
@@ -440,8 +905,24 @@ const activityDetails: Record<TimelineActivity['type'], { description: string; f
       { label: 'Valid Through', value: '07/01/2026' },
     ],
   },
-  comment: {
-    description: 'A comment was added to the patient record.',
+  eligibility_benefits: {
+    description: 'An eligibility and benefits check was performed with the carrier.',
+    fields: [
+      { label: 'Carrier', value: 'Aetna' },
+      { label: 'Plan Type', value: 'PPO' },
+      { label: 'Verification Method', value: 'Electronic (270/271)' },
+      { label: 'Initiated By', value: 'System — Auto Trigger' },
+    ],
+  },
+  ehr_log: {
+    description: 'An event was synced from the EHR system.',
+    fields: [
+      { label: 'EHR System', value: 'BrightTree' },
+      { label: 'Sync Type', value: 'Automatic' },
+    ],
+  },
+  note: {
+    description: 'A note was added to this patient record.',
     fields: [],
   },
 };
@@ -464,7 +945,7 @@ function formatOrderId(orderId: string): string {
 }
 
 function SidebarActivityDetail({ activity, onClose }: { activity: TimelineActivity; onClose: () => void }) {
-  const details = activityDetails[activity.type];
+  const details = activityDetails[activity.type] ?? { description: '', fields: [] };
   const typeLabel = activityTypeLabel[activity.type];
   const badgeVariant = activityTypeBadgeVariant[activity.type];
 
@@ -587,135 +1068,200 @@ function formatSidebarAgo(dateStr: string): string {
 }
 
 function SidebarOrderDetail({ order, patient, onClose }: { order: Order; patient: Patient; onClose: () => void }) {
-  const [activeOrderTab, setActiveOrderTab] = useState(0);
   const orderStatusConfig = statusBadgeConfig[order.status];
   const completedCount = orderStageToCompleted[order.stage];
-  const referredBy = [order.referringFacility, order.referringPractitioner].filter(Boolean).join(', ') || order.orderName;
+
+  const formatNoteDate = (dateStr: string) => {
+    const d = new Date(dateStr);
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' });
+  };
+
+  const formatTimestamp = (dateStr: string) => {
+    const d = new Date(dateStr + 'T00:00:00');
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  };
 
   return (
     <div className="flex-1 overflow-y-auto">
-      {/* Patient header */}
-      <div className="flex items-start justify-between px-4 pt-4 pb-3">
-        <div className="flex flex-col gap-0.5">
-          <h2 className="text-lg font-semibold text-text-primary">
-            {patient.firstName} {patient.lastName}, {formatSidebarDob(patient.dob)}
-          </h2>
-          <p className="text-xs text-text-tertiary">EHR ID MRN-{patient.mrn}</p>
-        </div>
+      {/* Header with close */}
+      <div className="flex items-center justify-between px-4 pt-4 pb-2">
+        <p className="text-[20px] font-medium lasso:wght-medium leading-7 text-text-primary">{order.orderName}</p>
         <Button
           variant="ghost"
           size="icon"
-          className="rounded-full size-7 hover:bg-bg-tertiary shrink-0 mt-0.5"
+          className="rounded-full size-7 hover:bg-bg-tertiary shrink-0"
           onClick={onClose}
         >
           <SidebarSimple className="size-4" />
         </Button>
       </div>
 
-      {/* ORDER STATUS / PAYER */}
-      <div className="flex gap-8 px-4 py-3">
-        <div className="flex flex-col gap-1">
-          <span className="text-[11px] font-medium text-text-tertiary uppercase tracking-wider">Order Status</span>
+      <div className="flex flex-col gap-5 px-4 pb-6">
+        {/* Order type + Status */}
+        <div className="flex items-center gap-3">
           <Badge variant={orderStatusConfig.variant}>{orderStatusConfig.label}</Badge>
+          <span className="text-xs text-text-tertiary">Order {order.id}</span>
         </div>
-        <div className="flex flex-col gap-1">
-          <span className="text-[11px] font-medium text-text-tertiary uppercase tracking-wider">Payer</span>
-          <span className="text-sm text-text-secondary">—</span>
-        </div>
-      </div>
 
-      {/* Order heading + received ago */}
-      <div className="flex items-center justify-between px-4 pt-1 pb-2">
-        <h3 className="text-lg font-semibold text-text-primary">Order</h3>
-        <span className="text-sm font-medium text-text-primary">Received {formatSidebarAgo(order.dateCreated)}</span>
-      </div>
-
-      {/* Order card */}
-      <div className="mx-4 mb-5 border border-border-secondary rounded-lg overflow-hidden">
-        <div className="flex items-start justify-between p-4 pb-3">
-          <div className="flex flex-col gap-0.5 min-w-0 flex-1">
-            <span className="text-sm font-semibold text-text-primary">{order.orderName}</span>
-            <span className="text-xs text-text-tertiary truncate">External order ID: {order.externalOrderId}</span>
-          </div>
-          <CaretDown weight="regular" className="size-5 text-text-tertiary shrink-0 ml-3 mt-0.5" />
-        </div>
-        <div className="border-t border-border-secondary mx-4" />
-        <div className="p-4 pt-3">
-          <p className="text-sm text-text-secondary leading-relaxed">Referred by {referredBy}</p>
-        </div>
-      </div>
-
-      {/* Tabs */}
-      <div className="flex items-center gap-5 px-4 border-b border-border-secondary">
-        {ORDER_TABS.map((tab, i) => (
-          <button
-            key={tab}
-            onClick={() => setActiveOrderTab(i)}
-            className={cn(
-              'relative pb-2.5 text-sm transition-colors cursor-pointer whitespace-nowrap',
-              i === activeOrderTab
-                ? 'font-semibold text-text-primary'
-                : 'text-text-tertiary hover:text-text-secondary'
-            )}
-          >
-            {tab}
-            {i === activeOrderTab && (
-              <span className="absolute bottom-0 left-0 right-0 h-[2.5px] bg-brand-terracotta rounded-full" />
-            )}
-          </button>
-        ))}
-      </div>
-
-      {/* Order processing tab — horizontal stepper */}
-      {activeOrderTab === 0 && (
-        <div className="px-4 py-5 flex flex-col gap-5">
-          <div className="grid grid-cols-4 gap-2.5">
+        {/* Stage tracker */}
+        <div className="flex flex-col gap-2">
+          <span className="text-[11px] font-medium text-text-tertiary uppercase tracking-wider">Processing Stage</span>
+          <div className="flex flex-col">
             {SIDEBAR_ORDER_STEPS.map((step, i) => {
               const isCompleted = i < completedCount;
               const isCurrent = i === completedCount;
+              const isLast = i === SIDEBAR_ORDER_STEPS.length - 1;
 
               return (
-                <div key={step.id} className="flex flex-col gap-1.5">
-                  <div
-                    className={cn(
-                      'h-1.5 rounded-full',
-                      isCompleted
-                        ? 'bg-[var(--green-9)]'
-                        : isCurrent
-                          ? 'bg-[var(--green-9)]/40'
-                          : 'bg-neutral-200'
+                <div key={step.id} className="flex gap-3">
+                  <div className="flex flex-col items-center">
+                    {isCompleted || isCurrent ? (
+                      <div className="size-3 rounded-full bg-[var(--green-9)] shrink-0 mt-1" />
+                    ) : (
+                      <div className="size-3 rounded-full bg-border-secondary shrink-0 mt-1" />
                     )}
-                  />
-                  <span
-                    className={cn(
-                      'text-xs leading-tight',
-                      isCompleted
-                        ? 'text-text-primary font-medium'
-                        : 'text-text-tertiary'
+                    {!isLast && (
+                      <div className={cn(
+                        'w-px flex-1 min-h-[20px] mt-1 mb-1',
+                        isCompleted ? 'bg-border-success-primary' : 'bg-border-secondary'
+                      )} />
                     )}
-                  >
-                    {step.label}
-                  </span>
+                  </div>
+                  <div className={cn('flex flex-col pb-3', isLast && 'pb-0')}>
+                    <span className={cn(
+                      'text-sm leading-5',
+                      isCompleted || isCurrent ? 'text-text-primary font-medium lasso:wght-medium' : 'text-text-tertiary'
+                    )}>
+                      {step.label}
+                    </span>
+                  </div>
                 </div>
               );
             })}
           </div>
+        </div>
 
-          <div className="flex items-center justify-end">
-            <div className="flex items-center gap-1.5 text-text-secondary">
-              <Clock weight="regular" className="size-4" />
-              <span className="text-sm font-medium">Updated {formatSidebarAgo(order.lastUpdated)}</span>
+        {/* Order items */}
+        {order.items.length > 0 && (
+          <div className="flex flex-col gap-2">
+            <span className="text-[11px] font-medium text-text-tertiary uppercase tracking-wider">Order Items</span>
+            <div className="border border-border-tertiary rounded-md overflow-hidden">
+              {order.items.map((item, i) => (
+                <div
+                  key={item.id}
+                  className={cn(
+                    'flex items-start justify-between px-3 py-2.5 hover:bg-accent/50 transition-colors',
+                    i < order.items.length - 1 && 'border-b border-border-tertiary'
+                  )}
+                >
+                  <div className="flex flex-col gap-0.5 min-w-0 flex-1">
+                    <span className="text-sm text-text-primary">{item.product}</span>
+                    <span className="text-xs text-text-tertiary truncate">{item.description}</span>
+                  </div>
+                  <div className="flex flex-col items-end gap-0.5 shrink-0 ml-3">
+                    <span className="text-xs font-medium text-text-secondary">{item.hcpcsCode}</span>
+                    <span className="text-xs text-text-tertiary">Qty: {item.quantity}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Missing information */}
+        {order.missingInfo && order.missingInfo.length > 0 && (
+          <div className="flex flex-col gap-2">
+            <span className="text-[11px] font-medium text-text-warning-primary uppercase tracking-wider">Missing Information</span>
+            <div className="border border-dashed border-border-warning-primary rounded-md bg-bg-warning-secondary px-3 py-2.5">
+              <ul className="flex flex-col gap-1.5">
+                {order.missingInfo.map((info, i) => (
+                  <li key={i} className="text-sm text-text-warning-primary flex items-start gap-2">
+                    <span className="shrink-0 mt-1.5 size-1 rounded-full bg-text-warning-primary" />
+                    {info}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        )}
+
+        {/* Rejection reasons */}
+        {order.rejectionReasons && order.rejectionReasons.length > 0 && (
+          <div className="flex flex-col gap-2">
+            <span className="text-[11px] font-medium text-text-error-primary uppercase tracking-wider">Rejection Reasons</span>
+            <div className="border border-border-error-secondary rounded-md bg-bg-error-secondary px-3 py-2.5">
+              <ul className="flex flex-col gap-1.5">
+                {order.rejectionReasons.map((reason, i) => (
+                  <li key={i} className="text-sm text-text-error-primary flex items-start gap-2">
+                    <span className="shrink-0 mt-1.5 size-1 rounded-full bg-text-error-primary" />
+                    {reason}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        )}
+
+        {/* Referring practitioner & facility */}
+        {(order.referringPractitioner || order.referringFacility) && (
+          <div className="flex flex-col gap-2">
+            <span className="text-[11px] font-medium text-text-tertiary uppercase tracking-wider">Referring Provider</span>
+            <div className="border border-border-tertiary rounded-md px-3 py-2.5 flex flex-col gap-1.5">
+              {order.referringPractitioner && (
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-text-tertiary">Practitioner</span>
+                  <span className="text-sm font-medium text-text-primary">{order.referringPractitioner}</span>
+                </div>
+              )}
+              {order.referringFacility && (
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-text-tertiary">Facility</span>
+                  <span className="text-sm font-medium text-text-primary">{order.referringFacility}</span>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Notes */}
+        {order.notes.length > 0 && (
+          <div className="flex flex-col gap-2">
+            <span className="text-[11px] font-medium text-text-tertiary uppercase tracking-wider">Notes</span>
+            <div className="border border-border-tertiary rounded-md overflow-hidden">
+              {order.notes.map((note, i) => (
+                <div
+                  key={note.id}
+                  className={cn(
+                    'px-3 py-2.5 flex flex-col gap-1 hover:bg-accent/50 transition-colors',
+                    i < order.notes.length - 1 && 'border-b border-border-tertiary'
+                  )}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-xs font-medium text-text-primary">{note.author}</span>
+                    <span className="text-[11px] text-text-tertiary shrink-0">{formatNoteDate(note.createdAt)}</span>
+                  </div>
+                  <p className="text-sm text-text-secondary leading-relaxed">{note.content}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Timestamps */}
+        <div className="flex flex-col gap-2">
+          <span className="text-[11px] font-medium text-text-tertiary uppercase tracking-wider">Timeline</span>
+          <div className="border border-border-tertiary rounded-md px-3 py-2.5 flex flex-col gap-1.5">
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-text-tertiary">Created</span>
+              <span className="text-sm text-text-primary">{formatTimestamp(order.dateCreated)}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-text-tertiary">Last updated</span>
+              <span className="text-sm text-text-primary">{formatTimestamp(order.lastUpdated)}</span>
             </div>
           </div>
         </div>
-      )}
-
-      {/* Other tabs placeholder */}
-      {activeOrderTab !== 0 && (
-        <div className="px-4 py-12 text-center text-sm text-text-tertiary">
-          No {ORDER_TABS[activeOrderTab]?.toLowerCase()} yet
-        </div>
-      )}
+      </div>
     </div>
   );
 }
@@ -883,6 +1429,21 @@ export function PatientSummaryVariantB({
   });
   const [workflowOpen, setWorkflowOpen] = useState(false);
 
+  const auditLogEntries: TimelineActivity[] = useMemo(() => [
+    { id: 'audit-1', type: 'ehr_log', title: 'Patient record accessed', description: 'Demographics viewed via EHR portal', ehrSystem: 'Epic', timestamp: '2026-04-08T09:14:00Z' },
+    { id: 'audit-2', type: 'ehr_log', title: 'Insurance eligibility queried', description: 'Real-time 270/271 transaction sent to Aetna', ehrSystem: 'Athenahealth', timestamp: '2026-04-07T16:42:00Z' },
+    { id: 'audit-3', type: 'ehr_log', title: 'Order ORD001 synced to EHR', description: 'Aerosol Mask order pushed via HL7 ADT feed', ehrSystem: 'Epic', timestamp: '2026-04-07T11:05:00Z' },
+    { id: 'audit-4', type: 'ehr_log', title: 'Patient demographics updated', description: 'Address changed from EHR sync — 123 Main St → 456 Oak Ave', ehrSystem: 'Cerner', timestamp: '2026-04-06T14:30:00Z' },
+    { id: 'audit-5', type: 'ehr_log', title: 'Clinical document received', description: 'Sleep study report ingested from referring provider fax', ehrSystem: 'Epic', timestamp: '2026-04-06T10:18:00Z' },
+    { id: 'audit-6', type: 'ehr_log', title: 'Prior authorization submitted', description: 'PA request sent to Aetna for CGM & Supplies order', ehrSystem: 'eClinicalWorks', timestamp: '2026-04-05T15:55:00Z' },
+    { id: 'audit-7', type: 'ehr_log', title: 'Patient record accessed', description: 'Orders tab viewed by sarah.chen@tennr.com', ehrSystem: 'Epic', timestamp: '2026-04-05T09:22:00Z' },
+    { id: 'audit-8', type: 'ehr_log', title: 'Eligibility response received', description: '271 response — active coverage confirmed through 2026-12-31', ehrSystem: 'Athenahealth', timestamp: '2026-04-04T13:47:00Z' },
+    { id: 'audit-9', type: 'ehr_log', title: 'Order ORD003 synced to EHR', description: 'Nebulizer order pushed via HL7 ORM feed', ehrSystem: 'Epic', timestamp: '2026-04-04T08:10:00Z' },
+    { id: 'audit-10', type: 'ehr_log', title: 'Patient consent form logged', description: 'HIPAA authorization recorded — signed digitally', ehrSystem: 'Cerner', timestamp: '2026-04-03T17:30:00Z' },
+    { id: 'audit-11', type: 'ehr_log', title: 'Referral document received', description: 'Inbound CCD from Evergreen Pulmonology via Direct messaging', ehrSystem: 'eClinicalWorks', timestamp: '2026-04-03T11:02:00Z' },
+    { id: 'audit-12', type: 'ehr_log', title: 'Patient record created', description: 'New patient record generated from inbound referral', ehrSystem: 'Epic', timestamp: '2026-04-02T08:45:00Z' },
+  ], []);
+
   // Handle resize drag
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
@@ -988,8 +1549,7 @@ export function PatientSummaryVariantB({
                 </h2>
                 <p className="text-sm text-text-secondary flex items-center gap-0.5">
                   {formatDate(patient.dob)} ·{' '}
-                  <CopyableValue label="MRN" value={patient.mrn.replace(/\D/g, '') || patient.mrn} /> ·{' '}
-                  <CopyableValue label="ID" value={patient.patientId} />
+                  <CopyableValue label="MRN" value={patient.mrn.replace(/\D/g, '') || patient.mrn} />
                 </p>
               </div>
 
@@ -997,18 +1557,8 @@ export function PatientSummaryVariantB({
               <div className="flex flex-col items-end gap-1 self-start pt-1">
                 <div className="flex items-center gap-2">
                   <p className="text-xs text-text-tertiary">
-                    Last synced today at 9:15 AM
+                    Last activity today at 9:15 AM
                   </p>
-                  {!isRightSidebarOpen && (
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="rounded-full size-7 hover:bg-bg-tertiary transition-opacity duration-200"
-                      onClick={() => setIsRightSidebarOpen(true)}
-                    >
-                      <SidebarSimple className="size-4" />
-                    </Button>
-                  )}
                 </div>
               </div>
             </div>
@@ -1112,6 +1662,18 @@ export function PatientSummaryVariantB({
                 >
                   Runs
                 </TabsTrigger>
+                <TabsTrigger
+                  value="audit-log"
+                  className={cn(
+                    'relative px-2 h-full inline-flex items-center justify-center text-sm transition-colors rounded-none border-0 shadow-none',
+                    'bg-transparent hover:bg-transparent data-[state=active]:bg-transparent data-[state=active]:shadow-none',
+                    'after:absolute after:bottom-[-1px] after:left-0 after:right-0 after:h-[2px]',
+                    'data-[state=active]:text-foreground data-[state=active]:font-medium data-[state=active]:after:bg-brand-terracotta',
+                    'data-[state=inactive]:text-muted-foreground data-[state=inactive]:font-normal hover:text-foreground'
+                  )}
+                >
+                  Audit Log
+                </TabsTrigger>
               </TabsList>
             </nav>
           </div>
@@ -1122,20 +1684,18 @@ export function PatientSummaryVariantB({
             <TabsContent value="summary" className="mt-0 flex flex-col gap-4">
               <div className="grid grid-cols-3 gap-4 items-stretch">
                 <div className="col-span-2 flex flex-col gap-4">
-                  <ActiveStagesSection patient={patient} onOpenWorkflow={() => setWorkflowOpen(true)} />
+                  <LastActivityCard activities={activities} />
                   <ActiveOrdersCard patientId={patient.id} orders={orders} onSelectOrder={handleSelectOrder} onViewAll={handleViewAllOrders} hideIllustrations={hideOrderIllustrations} />
                 </div>
                 <div className="flex flex-col gap-4">
-                  <EngagementCard phone={patient.phone} />
                   <PayerContactCard insurance={patient.primaryInsurance} />
-                  <ReferringProviderCard />
                 </div>
               </div>
             </TabsContent>
 
             {/* Activity Tab */}
             <TabsContent value="activity" className="mt-0">
-              <Timeline activities={activities} onAddComment={onAddComment} onSelectActivity={handleSelectActivity} />
+              <Timeline activities={activities} onAddComment={onAddComment} />
             </TabsContent>
 
             {/* Demographics Tab */}
@@ -1160,45 +1720,7 @@ export function PatientSummaryVariantB({
 
             {/* Orders Tab */}
             <TabsContent value="orders" className="mt-0">
-              <div className="flex flex-col gap-4">
-                {/* Active Orders */}
-                {orders.filter(o => o.status !== 'completed').length > 0 && (
-                  <div>
-                    <div className="flex items-center justify-between mb-3">
-                      <p className="text-base font-medium lasso:wght-medium leading-6 text-text-primary">
-                        Active orders
-                      </p>
-                      <Badge variant="outline" className="text-xs">
-                        {orders.filter(o => o.status !== 'completed').length}
-                      </Badge>
-                    </div>
-                    <div className="grid grid-cols-4 gap-3">
-                      {orders.filter(o => o.status !== 'completed').map(order => (
-                        <OrderCard key={order.id} order={order} onSelect={handleSelectOrder} hideIllustrations={hideOrderIllustrations} />
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Completed Orders */}
-                {orders.filter(o => o.status === 'completed').length > 0 && (
-                  <div>
-                    <div className="flex items-center justify-between mb-3">
-                      <p className="text-base font-medium lasso:wght-medium leading-6 text-text-secondary">
-                        Completed
-                      </p>
-                      <Badge variant="outline" className="text-xs">
-                        {orders.filter(o => o.status === 'completed').length}
-                      </Badge>
-                    </div>
-                    <div className="grid grid-cols-4 gap-3">
-                      {orders.filter(o => o.status === 'completed').map(order => (
-                        <OrderCard key={order.id} order={order} onSelect={handleSelectOrder} hideIllustrations={hideOrderIllustrations} />
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
+              <OrdersTabContent orders={orders} onSelectOrder={handleSelectOrder} />
             </TabsContent>
 
             {/* Notes Tab */}
@@ -1221,6 +1743,11 @@ export function PatientSummaryVariantB({
             {/* Runs Tab */}
             <TabsContent value="runs" className="mt-0">
               <RunsSection patient={patient} />
+            </TabsContent>
+
+            {/* Audit Log Tab */}
+            <TabsContent value="audit-log" className="mt-0">
+              <Timeline activities={auditLogEntries} filterBy="ehrSystem" />
             </TabsContent>
           </div>
         </Tabs>
@@ -1300,7 +1827,7 @@ export function PatientSummaryVariantB({
                   onClick={() => toggleSection('patient')}
                   className="flex items-center justify-between px-4 h-[40px] w-full hover:bg-bg-secondary/50 transition-colors"
                 >
-                  <span className="text-base font-medium text-text-primary">Patient</span>
+                  <span className="text-base font-medium lasso:wght-medium leading-6 text-text-primary">Patient</span>
                   <CaretDown className={cn(
                     "size-4 text-text-tertiary transition-transform duration-200",
                     !expandedSections.patient && "-rotate-90"
@@ -1366,7 +1893,7 @@ export function PatientSummaryVariantB({
                   onClick={() => toggleSection('insurance')}
                   className="flex items-center justify-between px-4 h-[40px] w-full hover:bg-bg-secondary/50 transition-colors"
                 >
-                  <span className="text-base font-medium text-text-primary">Insurance</span>
+                  <span className="text-base font-medium lasso:wght-medium leading-6 text-text-primary">Insurance</span>
                   <CaretDown className={cn(
                     "size-4 text-text-tertiary transition-transform duration-200",
                     !expandedSections.insurance && "-rotate-90"
@@ -1453,7 +1980,7 @@ export function PatientSummaryVariantB({
                   onClick={() => toggleSection('data')}
                   className="flex items-center justify-between px-4 h-[40px] w-full hover:bg-bg-secondary/50 transition-colors"
                 >
-                  <span className="text-base font-medium text-text-primary">Data</span>
+                  <span className="text-base font-medium lasso:wght-medium leading-6 text-text-primary">Data</span>
                   <CaretDown className={cn(
                     "size-4 text-text-tertiary transition-transform duration-200",
                     !expandedSections.data && "-rotate-90"

@@ -66,7 +66,7 @@ export function PatientPageHeader({ patient }: PatientPageHeaderProps) {
         <div className="flex flex-col gap-2 items-start">
           {/* Breadcrumb */}
           <div className="flex items-center gap-2.5">
-            <Link href="/patients" className="text-sm text-text-secondary hover:text-text-primary transition-colors">
+            <Link href="/explore" className="text-sm text-text-secondary hover:text-text-primary transition-colors">
               Patients
             </Link>
           </div>
@@ -80,7 +80,7 @@ export function PatientPageHeader({ patient }: PatientPageHeaderProps) {
         {/* Sync Status */}
         <div className="flex items-center gap-2">
           <p className="text-xs text-text-tertiary">
-            Last synced today at 9:15 AM
+            Last activity today at 9:15 AM
           </p>
           <button className="flex items-center justify-center w-9 h-9 rounded-full bg-bg-white border border-border-secondary shadow-xs hover:bg-bg-primary-hover transition-colors">
             <ArrowsClockwise className="w-4 h-4 text-text-primary" weight="bold" />

@@ -30,6 +30,8 @@ export interface Order {
   lastUpdated: string;
   documents: OrderDocument[];
   notes: OrderNote[];
+  missingInfo?: string[];
+  rejectionReasons?: string[];
 }
 
 export interface OrderDocument {

@@ -14,17 +14,12 @@ export function SearchProvider({ children }: { children: React.ReactNode }) {
     router.push(`/orders/${orderId}`);
   };
 
-  const handleSelectIllustration = (path: string) => {
-    router.push(path);
-  };
-
   return (
     <>
       {children}
       <SearchModal
         onSelectPatient={handleSelectPatient}
         onSelectOrder={handleSelectOrder}
-        onSelectIllustration={handleSelectIllustration}
       />
     </>
   );

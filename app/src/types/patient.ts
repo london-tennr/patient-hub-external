@@ -56,8 +56,20 @@ export interface Patient {
   lastActivity?: {
     title: string;
     timestamp: string;
+    metadata?: string;
+    source?: 'tennr' | 'user' | 'integration';
+    sourceLabel?: string;
   };
+  recentActivities?: {
+    title: string;
+    timestamp: string;
+    metadata?: string;
+    source?: 'tennr' | 'user' | 'integration';
+    sourceLabel?: string;
+  }[];
   order?: PatientOrder;
+  actionCount?: number;
+  actionItems?: { id: string; label: string; description?: string }[];
 }
 
 export interface PatientOrderDoc {

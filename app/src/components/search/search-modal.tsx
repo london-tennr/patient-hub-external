@@ -9,7 +9,7 @@ interface SearchOption {
   label: string;
   value: string;
   category?: string;
-  resultType: 'patient' | 'order' | 'illustration';
+  resultType: 'patient' | 'order';
   data: SearchResult;
   [key: string]: string | string[] | SearchResult | undefined;
 }
@@ -17,7 +17,6 @@ interface SearchOption {
 interface SearchModalProps {
   onSelectPatient: (patientId: string) => void;
   onSelectOrder: (orderId: string) => void;
-  onSelectIllustration?: (path: string) => void;
 }
 
 // Mock data for development
@@ -91,7 +90,7 @@ const stageBadgeVariant: Record<string, 'default' | 'secondary' | 'outline' | 'd
   complete: 'default',
 };
 
-export function SearchModal({ onSelectPatient, onSelectOrder, onSelectIllustration }: SearchModalProps) {
+export function SearchModal({ onSelectPatient, onSelectOrder }: SearchModalProps) {
   const options: SearchOption[] = useMemo(() => {
     const allResults = [...mockPatients, ...mockOrders];
 
@@ -117,29 +116,11 @@ export function SearchModal({ onSelectPatient, onSelectOrder, onSelectIllustrati
       }
     });
 
-    // Illustration mode: hidden results that appear when searching "illustration"
-    mapped.push({
-      label: 'illustration explore v.1',
-      value: '/patients',
-      resultType: 'illustration',
-      data: mockPatients[0],
-      category: 'Illustration Mode',
-    });
-    mapped.push({
-      label: 'illustration explore v.2',
-      value: '/explore-progress-bar',
-      resultType: 'illustration',
-      data: mockPatients[0],
-      category: 'Illustration Mode',
-    });
-
     return mapped;
   }, []);
 
   const handleSelectOption = (option: SearchOption) => {
-    if (option.resultType === 'illustration') {
-      onSelectIllustration?.(option.value);
-    } else if (option.resultType === 'patient') {
+    if (option.resultType === 'patient') {
       onSelectPatient(option.value);
     } else {
       onSelectOrder(option.value);
@@ -191,22 +172,6 @@ export function SearchModal({ onSelectPatient, onSelectOrder, onSelectIllustrati
               {order.stage.charAt(0).toUpperCase() + order.stage.slice(1)}
             </Badge>
           </div>
-        </div>
-      );
-    }
-
-    if (option.resultType === 'illustration') {
-      const version = option.value === '/patients' ? 'v.1' : 'v.2';
-      const description = option.value === '/patients'
-        ? 'Explore with sidebar preview'
-        : 'Explore with progress bar';
-      return (
-        <div className="flex items-center justify-between w-full">
-          <div>
-            <p className="font-medium">Explore {version}</p>
-            <p className="text-sm text-muted-foreground">{description}</p>
-          </div>
-          <Badge variant="outline">Illustration</Badge>
         </div>
       );
     }

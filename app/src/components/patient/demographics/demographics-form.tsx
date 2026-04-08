@@ -1,5 +1,7 @@
 'use client';
 
+import { useState } from 'react';
+import { Eye, EyeSlash } from '@phosphor-icons/react';
 import type { Patient } from '@/types/patient';
 
 interface DemographicsFormProps {
@@ -11,6 +13,32 @@ function Field({ label, value }: { label: string; value?: string | null }) {
     <div className="space-y-1">
       <label className="text-sm font-medium text-text-secondary">{label}</label>
       <p className="text-sm text-text-primary">{value || <span className="text-text-tertiary">Not provided</span>}</p>
+    </div>
+  );
+}
+
+function SSNField({ value }: { value: string }) {
+  const [revealed, setRevealed] = useState(false);
+  const lastFour = value.replace(/\D/g, '').slice(-4);
+  const masked = '***-**-****';
+  const partial = `***-**-${lastFour}`;
+
+  return (
+    <div className="space-y-1">
+      <label className="text-sm font-medium text-text-secondary">SSN</label>
+      <div className="flex items-center gap-2">
+        <p className="text-sm text-text-primary font-mono">{revealed ? partial : masked}</p>
+        <button
+          onClick={() => setRevealed(!revealed)}
+          className="text-text-tertiary hover:text-text-primary transition-colors cursor-pointer"
+        >
+          {revealed ? (
+            <EyeSlash weight="regular" className="size-4" />
+          ) : (
+            <Eye weight="regular" className="size-4" />
+          )}
+        </button>
+      </div>
     </div>
   );
 }
@@ -39,7 +67,7 @@ export function DemographicsForm({ patient }: DemographicsFormProps) {
             <Field label="Marital Status" value="Married" />
             <Field label="Preferred Language" value="English" />
             <Field label="MRN" value={patient.mrn} />
-            <Field label="SSN" value="***-**-6789" />
+            <SSNField value="482-36-6789" />
           </div>
         </div>
       </div>
@@ -76,15 +104,11 @@ export function DemographicsForm({ patient }: DemographicsFormProps) {
           <div className={titleClass}>Emergency Contact</div>
         </div>
         <div className="p-4">
-          {!patient.emergencyContact?.name && !patient.emergencyContact?.phone && !patient.emergencyContact?.relationship ? (
-            <p className="text-sm text-text-tertiary">No emergency contact on file</p>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <Field label="Name" value={patient.emergencyContact?.name} />
-              <Field label="Phone" value={patient.emergencyContact?.phone} />
-              <Field label="Relationship" value={patient.emergencyContact?.relationship} />
-            </div>
-          )}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <Field label="Name" value={patient.emergencyContact?.name ?? 'Robert Williams'} />
+            <Field label="Contact" value={patient.emergencyContact?.phone ?? '(425) 555-0187'} />
+            <Field label="Relationship" value={patient.emergencyContact?.relationship ?? 'Father'} />
+          </div>
         </div>
       </div>
     </div>

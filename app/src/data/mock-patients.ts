@@ -325,53 +325,88 @@ function generateStageCompletedAt(
   return result;
 }
 
-const activityTitles: Record<PatientStatus, string[]> = {
-  on_track: [
-    'Insurance verification initiated',
-    'Eligibility re-verified with carrier',
-    'Prior auth submitted',
-    'Document uploaded by patient',
-    'Referral received from provider',
-    'Order qualification in progress',
-  ],
-  missing_info: [
-    'Missing insurance card',
-    'Incomplete referral',
-    'Missing CMN form',
-    'Awaiting patient demographics update',
-  ],
-  needs_attention: [
-    'Prior auth request denied',
-    'Eligibility check failed',
-    'Carrier response overdue',
-    'Document mismatch flagged for review',
-  ],
-  blocked: [
-    'Prior auth denied by carrier',
-    'Insurance coverage terminated',
-    'Patient unreachable',
-    'Order blocked',
-  ],
-  completed: [
-    'Order completed',
-    'Order fulfilled',
-    'All claims processed and accepted',
-  ],
-  inactive: [
-    'Patient opted out of treatment',
-    'Referral withdrawn by provider',
-    'Patient transferred to another facility',
-  ],
-};
+const activityTypes = ['Create order', 'Update order', 'Create patient', 'Update patient'] as const;
 
-function generateLastActivity(status: PatientStatus, referralDate: string): { title: string; timestamp: string } {
-  const titles = activityTitles[status];
-  const title = titles[Math.floor(rand() * titles.length)];
-  const base = new Date(referralDate);
-  // Activity is 0-14 days after referral
-  base.setDate(base.getDate() + Math.floor(rand() * 14));
-  base.setHours(8 + Math.floor(rand() * 10), Math.floor(rand() * 60));
-  return { title, timestamp: base.toISOString() };
+const updateOrderMetadata = [
+  'Status changed to In Progress',
+  'Insurance verified',
+  'Documents uploaded',
+  'Prior auth submitted',
+  'Shipping address updated',
+  'Notes added',
+];
+
+const updatePatientMetadata = [
+  'Demographics updated',
+  'Insurance info updated',
+  'Phone number changed',
+  'Address updated',
+  'Primary care provider updated',
+  'Emergency contact added',
+];
+
+const activityUserNames = [
+  'Sarah Chen',
+  'Mike Rivera',
+  'Emily Nguyen',
+  'James Park',
+  'Lisa Thompson',
+  'David Kim',
+  'Rachel Foster',
+  'Carlos Mendez',
+  'Amanda Wright',
+  'Kevin O\'Brien',
+];
+
+type ActivitySource = 'tennr' | 'user' | 'integration';
+
+function generateActivitySource(): { source: ActivitySource; sourceLabel: string } {
+  const r = rand();
+  if (r < 0.4) {
+    return { source: 'tennr', sourceLabel: 'Tennr' };
+  } else if (r < 0.75) {
+    const name = activityUserNames[Math.floor(rand() * activityUserNames.length)];
+    return { source: 'user', sourceLabel: name };
+  } else {
+    return { source: 'integration', sourceLabel: 'Integration' };
+  }
+}
+
+function generateActivityEntry(referralDate: string, dayOffset: number): { title: string; timestamp: string; metadata?: string; source: ActivitySource; sourceLabel: string } {
+  const type = activityTypes[Math.floor(rand() * activityTypes.length)];
+  const orderId = `Order-${String(1000 + Math.floor(rand() * 9000))}`;
+  const orderType = orderCategories[Math.floor(rand() * orderCategories.length)];
+  const { source, sourceLabel } = generateActivitySource();
+
+  let metadata: string | undefined;
+  if (type === 'Create order') {
+    metadata = `${orderId} · ${orderType}`;
+  } else if (type === 'Update order') {
+    metadata = `${orderId} · ${updateOrderMetadata[Math.floor(rand() * updateOrderMetadata.length)]}`;
+  } else if (type === 'Update patient') {
+    metadata = updatePatientMetadata[Math.floor(rand() * updatePatientMetadata.length)];
+  }
+
+  const ts = new Date(referralDate);
+  ts.setDate(ts.getDate() + dayOffset);
+  ts.setHours(8 + Math.floor(rand() * 10), Math.floor(rand() * 60));
+
+  return { title: type, timestamp: ts.toISOString(), metadata, source, sourceLabel };
+}
+
+function generateLastActivity(status: PatientStatus, referralDate: string): { title: string; timestamp: string; metadata?: string; source: ActivitySource; sourceLabel: string } {
+  return generateActivityEntry(referralDate, Math.floor(rand() * 14));
+}
+
+function generateRecentActivities(status: PatientStatus, referralDate: string): { title: string; timestamp: string; metadata?: string; source: ActivitySource; sourceLabel: string }[] {
+  const activities: { title: string; timestamp: string; metadata?: string; source: ActivitySource; sourceLabel: string }[] = [];
+
+  for (let i = 0; i < 5; i++) {
+    activities.push(generateActivityEntry(referralDate, Math.floor(rand() * 14) - i * 2));
+  }
+
+  activities.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+  return activities;
 }
 
 function generatePatients(count: number): Patient[] {
@@ -430,8 +465,32 @@ function generatePatients(count: number): Patient[] {
         lastSynced: randomSyncDate(i),
       },
       lastActivity: generateLastActivity(coherentState.status, referralDate),
+      recentActivities: generateRecentActivities(coherentState.status, referralDate),
       order,
     });
+  }
+
+  // Helper: rebuild stageCompletedAt to match current stage & status
+  function rebuildStageCompletedAt(p: Patient) {
+    const stageIdx = stages.indexOf(p.stage);
+    const isBlockedOrAttention =
+      p.status === 'blocked' || p.status === 'needs_attention' || p.status === 'missing_info';
+    const completedCount = isBlockedOrAttention ? stageIdx : stageIdx + 1;
+    const runSet = new Set(p.runningStages ?? []);
+
+    const result: Partial<Record<PatientStage, string>> = {};
+    const base = new Date(p.referralDate);
+
+    for (let j = 0; j < completedCount; j++) {
+      const s = stages[j];
+      if (!runSet.has(s)) {
+        base.setDate(base.getDate() + 1 + Math.floor(rand() * 3));
+        base.setHours(8 + Math.floor(rand() * 10), Math.floor(rand() * 60));
+        result[s] = base.toISOString();
+      }
+    }
+
+    p.stageCompletedAt = Object.keys(result).length > 0 ? result : undefined;
   }
 
   // Override statuses: 1 bug, 1 action required, 3 on_track, rest completed
@@ -441,12 +500,20 @@ function generatePatients(count: number): Patient[] {
       patients[i].status = 'blocked';
       patients[i].stage = 'prior_authorization';
       patients[i].tennrStatus = 'idle';
+      patients[i].runningStages = undefined;
       patients[i].lastActivity = generateLastActivity('blocked', patients[i].referralDate);
+      rebuildStageCompletedAt(patients[i]);
     } else if (i === 1) {
       patients[i].status = 'missing_info';
       patients[i].stage = 'insurance_verification';
       patients[i].tennrStatus = 'in_queue';
+      patients[i].runningStages = undefined;
+      patients[i].actionCount = 1;
+      patients[i].actionItems = [
+        { id: 'action-1', label: 'Verify insurance details', description: 'Member ID appears invalid for Aetna' },
+      ];
       patients[i].lastActivity = generateLastActivity('missing_info', patients[i].referralDate);
+      rebuildStageCompletedAt(patients[i]);
     } else if (i < 5) {
       patients[i].status = 'on_track';
       patients[i].lastActivity = generateLastActivity('on_track', patients[i].referralDate);
@@ -457,19 +524,22 @@ function generatePatients(count: number): Patient[] {
         const numRunning = Math.min(uncompleted.length, rand() < 0.35 ? 2 : 3);
         patients[i].runningStages = shuffle(uncompleted).slice(0, numRunning);
       }
-      // Rebuild stageCompletedAt excluding running stages
-      const runSet = new Set(patients[i].runningStages);
-      const existing = patients[i].stageCompletedAt ?? {};
-      const cleaned: typeof existing = {};
-      for (const [k, v] of Object.entries(existing)) {
-        if (!runSet.has(k as PatientStage)) cleaned[k as PatientStage] = v;
-      }
-      patients[i].stageCompletedAt = cleaned;
+      rebuildStageCompletedAt(patients[i]);
     } else {
       patients[i].status = 'completed';
       patients[i].stage = 'claim_submitted';
       patients[i].tennrStatus = 'completed';
+      patients[i].runningStages = undefined;
       patients[i].lastActivity = generateLastActivity('completed', patients[i].referralDate);
+      // All stages completed
+      const result: Partial<Record<PatientStage, string>> = {};
+      const base = new Date(patients[i].referralDate);
+      for (const s of stages) {
+        base.setDate(base.getDate() + 1 + Math.floor(rand() * 3));
+        base.setHours(8 + Math.floor(rand() * 10), Math.floor(rand() * 60));
+        result[s] = base.toISOString();
+      }
+      patients[i].stageCompletedAt = result;
     }
   }
 

@@ -52,7 +52,7 @@ export function PatientHeader({ patient }: PatientHeaderProps) {
             <BreadcrumbList>
               <BreadcrumbItem>
                 <BreadcrumbLink asChild>
-                  <Link href="/patients" className="text-text-secondary text-xs">
+                  <Link href="/explore" className="text-text-secondary text-xs">
                     Patients
                   </Link>
                 </BreadcrumbLink>
@@ -64,13 +64,13 @@ export function PatientHeader({ patient }: PatientHeaderProps) {
             {patient.firstName} {patient.lastName}
           </h1>
           <p className="text-sm text-text-secondary mt-0.5">
-            {new Date(patient.dob).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' })} · MRN {patient.mrn} · ID {patient.patientId}
+            {new Date(patient.dob).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' })} · MRN {patient.mrn}
           </p>
         </div>
 
         <div className="flex items-center gap-2">
           <span className="text-xs text-text-secondary">
-            Last synced {formatSyncTime(patient.syncStatus.lastSynced)}
+            Last activity {formatSyncTime(patient.syncStatus.lastSynced)}
           </span>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>

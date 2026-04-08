@@ -12,6 +12,13 @@ import {
   Plus,
   Trash,
   ListBullets,
+  Warning,
+  FileText,
+  IdentificationCard,
+  Users,
+  MagnifyingGlass,
+  UploadSimple,
+  Eye,
 } from '@phosphor-icons/react';
 import { Input } from '@tennr/lasso/input';
 import { cn } from '@tennr/lasso/utils/cn';
@@ -23,11 +30,11 @@ type RadioOption = 'benefits' | 'manual' | 'reach_out' | 'phone_call';
 
 // ─── Info Row ───────────────────────────────────────────────────────────────
 
-function InfoRow({ label, value }: { label: string; value: string | React.ReactNode }) {
+function InfoRow({ label, value, highlight }: { label: string; value: string | React.ReactNode; highlight?: boolean }) {
   return (
     <div className="flex flex-col gap-0.5">
       <span className="text-xs font-semibold text-text-primary">{label}</span>
-      <span className="text-sm text-text-secondary">{value}</span>
+      <span className={cn('text-sm', highlight ? 'text-text-error-primary font-medium' : 'text-text-secondary')}>{value}</span>
     </div>
   );
 }
@@ -43,6 +50,24 @@ function ActiveCoverageBadge() {
     <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-bg-success-primary text-text-success-secondary text-xs font-medium">
       <CheckCircle weight="fill" className="size-3 text-icon-success-primary" />
       Active Coverage
+    </span>
+  );
+}
+
+function ErrorBadge({ label }: { label: string }) {
+  return (
+    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-bg-error-primary text-text-error-primary text-xs font-medium">
+      <Warning weight="fill" className="size-3" />
+      {label}
+    </span>
+  );
+}
+
+function WarningBadge({ label }: { label: string }) {
+  return (
+    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 text-xs font-medium">
+      <Warning weight="fill" className="size-3" />
+      {label}
     </span>
   );
 }
@@ -78,28 +103,14 @@ function SubSectionHeader({
   );
 }
 
-// ─── Main component ─────────────────────────────────────────────────────────
+// ─── Verify Insurance Content ───────────────────────────────────────────────
 
-interface WorkflowSheetProps {
-  patient: Patient | null;
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-}
-
-export function WorkflowSheet({ patient, open, onOpenChange }: WorkflowSheetProps) {
-  const [activeTab, setActiveTab] = useState<'eligibility' | 'documents'>('eligibility');
-  const [selectedOption, setSelectedOption] = useState<RadioOption | null>(null);
-
-  // Sub-section open states
+function VerifyInsuranceContent({ patient }: { patient: Patient }) {
+  const [electronicResultsOpen, setElectronicResultsOpen] = useState(true);
   const [memberInfoOpen, setMemberInfoOpen] = useState(true);
   const [payerOpen, setPayerOpen] = useState(true);
   const [planInfoOpen, setPlanInfoOpen] = useState(true);
-  const [electronicResultsOpen, setElectronicResultsOpen] = useState(true);
 
-  if (!open || !patient) return null;
-
-  const fullName = `${patient.firstName} ${patient.lastName}`;
-  const insuranceName = patient.primaryInsurance?.carrier ?? 'AmeriHealth Caritas';
   const memberId = patient.primaryInsurance?.memberId ?? '49753732';
   const groupNumber = patient.primaryInsurance?.groupNumber ?? 'W32424';
   const dob = patient.dob;
@@ -109,21 +120,448 @@ export function WorkflowSheet({ patient, open, onOpenChange }: WorkflowSheetProp
     return date.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' });
   };
 
+  return (
+    <div className="w-full space-y-3">
+      {/* Alert banner */}
+      <div className="flex items-start gap-3 px-4 py-3 rounded-lg border border-border-error-secondary bg-bg-error-primary">
+        <Warning weight="fill" className="size-4 text-text-error-primary shrink-0 mt-0.5" />
+        <div className="flex flex-col gap-1">
+          <p className="text-sm font-medium text-text-error-primary">Member ID validation failed</p>
+          <p className="text-xs text-text-error-secondary">
+            The Member ID <span className="font-mono font-medium">{memberId}</span> does not match any active policy with Aetna.
+            Please verify the ID is correct and re-run the eligibility check.
+          </p>
+        </div>
+      </div>
+
+      {/* Electronic Results */}
+      <div className="border border-border-secondary rounded-lg overflow-hidden bg-white">
+        <button
+          onClick={() => setElectronicResultsOpen(!electronicResultsOpen)}
+          className="flex items-center justify-between w-full px-4 py-3.5 cursor-pointer hover:bg-bg-secondary/30 transition-colors"
+        >
+          <div className="flex items-center gap-3">
+            <span className="text-base font-bold text-text-primary">Electronic Results</span>
+            <ErrorBadge label="Verification Failed" />
+            <span className="text-xs text-text-tertiary">Attempted: 03-26-2026 at 9:13:21 AM</span>
+          </div>
+          {electronicResultsOpen ? (
+            <CaretUp weight="regular" className="size-4 text-text-tertiary" />
+          ) : (
+            <CaretDown weight="regular" className="size-4 text-text-tertiary" />
+          )}
+        </button>
+
+        {electronicResultsOpen && (
+          <>
+            <SubSectionHeader title="Member Info" open={memberInfoOpen} onToggle={() => setMemberInfoOpen(!memberInfoOpen)} />
+            {memberInfoOpen && (
+              <div className="px-5 py-4 border-t border-border-secondary">
+                <p className="text-xs text-text-tertiary mb-4">Member</p>
+                <InfoGrid>
+                  <InfoRow label="First Name" value={patient.firstName} />
+                  <InfoRow label="Last Name" value={patient.lastName} />
+                  <InfoRow label="Date of Birth" value={formatDate(dob)} />
+                  <InfoRow label="Gender" value="F" />
+                  <InfoRow
+                    label="Address"
+                    value={<span>{patient.address.street}<br />{patient.address.city}, {patient.address.state}, {patient.address.zip}</span>}
+                  />
+                  <InfoRow label="Date of Service" value="01/01/2026" />
+                  <InfoRow label="Member ID" value={memberId} highlight />
+                </InfoGrid>
+              </div>
+            )}
+
+            <SubSectionHeader title="Payer" open={payerOpen} onToggle={() => setPayerOpen(!payerOpen)} />
+            {payerOpen && (
+              <div className="px-5 py-4 border-t border-border-secondary">
+                <InfoGrid>
+                  <InfoRow label="Payer Name" value="Aetna" />
+                  <InfoRow label="Payer ID" value="60054" />
+                  <InfoRow label="Payer Address" value={<span>151 Farmington Ave<br />Hartford, CT 06156</span>} />
+                  <InfoRow label="Service Type" value="DME" />
+                </InfoGrid>
+              </div>
+            )}
+
+            <SubSectionHeader title="Plan Info" badge={<ErrorBadge label="No Match" />} open={planInfoOpen} onToggle={() => setPlanInfoOpen(!planInfoOpen)} />
+            {planInfoOpen && (
+              <div className="px-5 py-4 border-t border-border-secondary">
+                <InfoGrid>
+                  <InfoRow label="Plan Name" value="—" />
+                  <InfoRow label="Plan Type" value="—" />
+                  <InfoRow label="Group Number" value={groupNumber} />
+                  <InfoRow label="Eligibility Start Date" value="—" />
+                </InfoGrid>
+                <p className="text-xs text-text-tertiary mt-4">No plan information returned. Verify member ID and payer details.</p>
+              </div>
+            )}
+          </>
+        )}
+      </div>
+
+      {/* Benefit rows — disabled */}
+      {[
+        'Benefit - Health Benefit Plan Coverage',
+        'Benefit - Durable Medical Equipment',
+      ].map((title) => (
+        <div key={title} className="border border-border-secondary rounded-lg overflow-hidden bg-bg-secondary/30 opacity-50">
+          <div className="flex items-center justify-between w-full px-4 py-3">
+            <div className="flex items-center gap-2.5">
+              <span className="text-sm font-medium text-text-tertiary">{title}</span>
+            </div>
+            <span className="text-xs text-text-tertiary">Pending verification</span>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ─── Multi-Patient Split Content ────────────────────────────────────────────
+
+function MultiPatientSplitContent({ patient }: { patient: Patient }) {
+  const [selectedPatients, setSelectedPatients] = useState<Set<number>>(new Set([0, 1]));
+
+  const detectedPatients = [
+    {
+      name: `${patient.firstName} ${patient.lastName}`,
+      dob: patient.dob,
+      pages: '1-4, 7-8',
+      orderType: 'CPAP Device',
+      confidence: 'High',
+    },
+    {
+      name: 'Robert Johansson',
+      dob: '1958-03-14',
+      pages: '5-6, 9-12',
+      orderType: 'Oxygen Concentrator',
+      confidence: 'High',
+    },
+  ];
+
+  const formatDate = (dateStr: string) => {
+    const date = new Date(dateStr);
+    return date.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' });
+  };
+
+  const togglePatient = (idx: number) => {
+    setSelectedPatients(prev => {
+      const next = new Set(prev);
+      if (next.has(idx)) next.delete(idx);
+      else next.add(idx);
+      return next;
+    });
+  };
+
+  return (
+    <div className="max-w-[900px] space-y-4">
+      {/* Alert banner */}
+      <div className="flex items-start gap-3 px-4 py-3 rounded-lg border border-amber-200 bg-amber-50">
+        <Users weight="fill" className="size-4 text-amber-600 shrink-0 mt-0.5" />
+        <div className="flex flex-col gap-1">
+          <p className="text-sm font-medium text-amber-800">Multiple patients detected on this referral</p>
+          <p className="text-xs text-amber-700">
+            The uploaded referral documents contain information for <span className="font-semibold">2 patients</span>.
+            Please review the detected patients below and confirm the split before proceeding.
+          </p>
+        </div>
+      </div>
+
+      {/* Source document preview */}
+      <div className="border border-border-secondary rounded-lg overflow-hidden bg-white">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-border-secondary">
+          <div className="flex items-center gap-2.5">
+            <FileText weight="regular" className="size-4 text-text-secondary" />
+            <span className="text-sm font-semibold text-text-primary">Source Document</span>
+            <span className="text-xs text-text-tertiary">Johansson_referral.pdf — 12 pages</span>
+          </div>
+          <button className="flex items-center gap-1.5 text-xs font-medium text-text-secondary hover:text-text-primary transition-colors cursor-pointer">
+            <Eye weight="regular" className="size-3.5" />
+            View full document
+          </button>
+        </div>
+        <div className="px-4 py-3 bg-bg-secondary/30">
+          <p className="text-xs text-text-tertiary">
+            Tennr detected references to multiple patients across the document pages. The pages have been grouped by patient below.
+          </p>
+        </div>
+      </div>
+
+      {/* Detected patients */}
+      <div className="space-y-3">
+        <p className="text-xs font-semibold text-text-primary uppercase tracking-wide">Detected Patients</p>
+        {detectedPatients.map((dp, idx) => (
+          <div
+            key={idx}
+            className={cn(
+              'border rounded-lg overflow-hidden bg-white transition-colors cursor-pointer',
+              selectedPatients.has(idx) ? 'border-border-brand-primary' : 'border-border-secondary'
+            )}
+            onClick={() => togglePatient(idx)}
+          >
+            <div className="flex items-start gap-3 px-4 py-4">
+              {/* Checkbox */}
+              <span className={cn(
+                'size-5 rounded border-2 shrink-0 flex items-center justify-center mt-0.5 transition-colors',
+                selectedPatients.has(idx) ? 'border-border-brand-primary bg-bg-brand-primary' : 'border-border-primary'
+              )}>
+                {selectedPatients.has(idx) && <CheckCircle weight="fill" className="size-3.5 text-white" />}
+              </span>
+
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-2">
+                  <IdentificationCard weight="regular" className="size-4 text-text-secondary" />
+                  <span className="text-sm font-semibold text-text-primary">{dp.name}</span>
+                  <span className={cn(
+                    'text-[10px] font-medium px-1.5 py-0.5 rounded-full',
+                    dp.confidence === 'High' ? 'bg-bg-success-primary text-text-success-secondary' : 'bg-amber-50 text-amber-700'
+                  )}>
+                    {dp.confidence} confidence
+                  </span>
+                </div>
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="flex flex-col gap-0.5">
+                    <span className="text-[11px] text-text-tertiary">DOB</span>
+                    <span className="text-xs text-text-primary">{formatDate(dp.dob)}</span>
+                  </div>
+                  <div className="flex flex-col gap-0.5">
+                    <span className="text-[11px] text-text-tertiary">Document pages</span>
+                    <span className="text-xs text-text-primary">{dp.pages}</span>
+                  </div>
+                  <div className="flex flex-col gap-0.5">
+                    <span className="text-[11px] text-text-tertiary">Order type</span>
+                    <span className="text-xs text-text-primary">{dp.orderType}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Page assignment summary */}
+      <div className="border border-border-secondary rounded-lg overflow-hidden bg-white">
+        <div className="px-4 py-3 border-b border-border-secondary">
+          <span className="text-sm font-semibold text-text-primary">Page Assignment Summary</span>
+        </div>
+        <div className="divide-y divide-border-secondary">
+          {[
+            { page: 'Pages 1–4', desc: 'Referral form — Scarlett Johansson (CPAP)', patient: detectedPatients[0].name },
+            { page: 'Pages 5–6', desc: 'Referral form — Robert Johansson (O2 Concentrator)', patient: detectedPatients[1].name },
+            { page: 'Pages 7–8', desc: 'Sleep study results — Scarlett Johansson', patient: detectedPatients[0].name },
+            { page: 'Pages 9–12', desc: 'Clinical notes — Robert Johansson', patient: detectedPatients[1].name },
+          ].map((row, i) => (
+            <div key={i} className="flex items-center gap-4 px-4 py-2.5">
+              <span className="text-xs font-mono text-text-tertiary w-20 shrink-0">{row.page}</span>
+              <span className="text-xs text-text-primary flex-1">{row.desc}</span>
+              <span className="text-[11px] text-text-tertiary">{row.patient}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Validate Documents Content ─────────────────────────────────────────────
+
+function ValidateDocumentsContent({ patient }: { patient: Patient }) {
+  const [selectedDoc, setSelectedDoc] = useState(0);
+
+  const documents = [
+    {
+      name: 'Johansson_referral.pdf',
+      pages: 4,
+      status: 'needs_review' as const,
+      type: 'Referral',
+      issues: [
+        { field: 'Referring physician NPI', extracted: '1234567890', issue: 'NPI does not match Dr. Sarah Chen in our records' },
+        { field: 'Diagnosis code', extracted: 'G47.33', issue: 'Verify ICD-10 code matches sleep apnea diagnosis' },
+      ],
+    },
+    {
+      name: 'Johansson_cmn.pdf',
+      pages: 2,
+      status: 'needs_review' as const,
+      type: 'Certificate of Medical Necessity',
+      issues: [
+        { field: 'Physician signature', extracted: '—', issue: 'Signature block appears to be missing on page 2' },
+        { field: 'Equipment description', extracted: 'CPAP E0601', issue: 'Confirm HCPCS code matches ordered equipment' },
+      ],
+    },
+    {
+      name: 'Johansson_sleep_study.pdf',
+      pages: 3,
+      status: 'validated' as const,
+      type: 'Sleep Study',
+      issues: [],
+    },
+  ];
+
+  const currentDoc = documents[selectedDoc];
+
+  return (
+    <div className="max-w-[900px] space-y-4">
+      {/* Alert banner */}
+      <div className="flex items-start gap-3 px-4 py-3 rounded-lg border border-amber-200 bg-amber-50">
+        <FileText weight="fill" className="size-4 text-amber-600 shrink-0 mt-0.5" />
+        <div className="flex flex-col gap-1">
+          <p className="text-sm font-medium text-amber-800">Document review required</p>
+          <p className="text-xs text-amber-700">
+            {documents.filter(d => d.status === 'needs_review').length} of {documents.length} documents
+            have extracted fields that need manual validation before the order can proceed.
+          </p>
+        </div>
+      </div>
+
+      <div className="flex gap-4">
+        {/* Document list sidebar */}
+        <div className="w-[220px] shrink-0 space-y-1.5">
+          {documents.map((doc, idx) => (
+            <button
+              key={idx}
+              onClick={() => setSelectedDoc(idx)}
+              className={cn(
+                'w-full flex items-start gap-2.5 px-3 py-2.5 rounded-lg text-left transition-colors cursor-pointer',
+                selectedDoc === idx ? 'bg-bg-secondary border border-border-secondary' : 'hover:bg-bg-secondary/50'
+              )}
+            >
+              <FileText weight="regular" className={cn(
+                'size-4 shrink-0 mt-0.5',
+                doc.status === 'validated' ? 'text-icon-success-primary' : 'text-amber-500'
+              )} />
+              <div className="flex flex-col gap-0.5 min-w-0">
+                <span className="text-xs font-medium text-text-primary truncate">{doc.name}</span>
+                <span className="text-[11px] text-text-tertiary">{doc.type} · {doc.pages}p</span>
+                {doc.status === 'needs_review' && (
+                  <span className="text-[10px] text-amber-600 font-medium">{doc.issues.length} fields to review</span>
+                )}
+                {doc.status === 'validated' && (
+                  <span className="text-[10px] text-text-success-primary font-medium">Validated</span>
+                )}
+              </div>
+            </button>
+          ))}
+        </div>
+
+        {/* Document detail panel */}
+        <div className="flex-1 min-w-0">
+          <div className="border border-border-secondary rounded-lg overflow-hidden bg-white">
+            {/* Document header */}
+            <div className="flex items-center justify-between px-4 py-3 border-b border-border-secondary">
+              <div className="flex items-center gap-2.5">
+                <span className="text-sm font-semibold text-text-primary">{currentDoc.name}</span>
+                {currentDoc.status === 'needs_review' ? (
+                  <WarningBadge label="Needs Review" />
+                ) : (
+                  <ActiveCoverageBadge />
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                <button className="flex items-center gap-1.5 text-xs font-medium text-text-secondary hover:text-text-primary transition-colors cursor-pointer">
+                  <Eye weight="regular" className="size-3.5" />
+                  View PDF
+                </button>
+              </div>
+            </div>
+
+            {/* Extracted fields */}
+            {currentDoc.status === 'needs_review' ? (
+              <div className="divide-y divide-border-secondary">
+                {currentDoc.issues.map((issue, idx) => (
+                  <div key={idx} className="px-4 py-3.5">
+                    <div className="flex items-start gap-3">
+                      <Warning weight="fill" className="size-3.5 text-amber-500 shrink-0 mt-1" />
+                      <div className="flex-1 min-w-0 space-y-2">
+                        <div>
+                          <p className="text-xs font-semibold text-text-primary">{issue.field}</p>
+                          <p className="text-xs text-text-tertiary mt-0.5">{issue.issue}</p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-[11px] text-text-tertiary">Extracted value:</span>
+                          <span className="text-xs font-mono bg-bg-secondary px-2 py-0.5 rounded text-text-primary">{issue.extracted}</span>
+                        </div>
+                        <div className="flex flex-col gap-1">
+                          <label className="text-[11px] text-text-tertiary">Corrected value</label>
+                          <Input defaultValue={issue.extracted === '—' ? '' : issue.extracted} className="h-8 text-xs max-w-xs" placeholder="Enter corrected value..." />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="px-4 py-8 text-center">
+                <CheckCircle weight="fill" className="size-8 text-icon-success-primary mx-auto mb-2" />
+                <p className="text-sm font-medium text-text-primary">All fields validated</p>
+                <p className="text-xs text-text-tertiary mt-1">No issues found with extracted document data.</p>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Main component ─────────────────────────────────────────────────────────
+
+interface WorkflowSheetProps {
+  patient: Patient | null;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  actionId?: string | null;
+}
+
+const actionTitles: Record<string, string> = {
+  'action-1': 'Verify Insurance Details',
+  'action-2': 'Multi-Patient Split',
+  'action-3': 'Validate Document Information',
+};
+
+const actionTabs: Record<string, { tab1: string; tab2: string }> = {
+  'action-1': { tab1: 'Eligibility Check', tab2: 'Patient Documents' },
+  'action-2': { tab1: 'Patient Split', tab2: 'Source Documents' },
+  'action-3': { tab1: 'Document Review', tab2: 'Extracted Data' },
+};
+
+export function WorkflowSheet({ patient, open, onOpenChange, actionId }: WorkflowSheetProps) {
+  const resolvedAction = actionId || 'action-1';
+  const [activeTab, setActiveTab] = useState<'primary' | 'secondary'>('primary');
+  const [selectedOption, setSelectedOption] = useState<RadioOption | null>(null);
+
+  if (!open || !patient) return null;
+
+  const fullName = `${patient.firstName} ${patient.lastName}`;
+  const insuranceName = patient.primaryInsurance?.carrier ?? 'Aetna';
+  const memberId = patient.primaryInsurance?.memberId ?? '49753732';
+  const dob = patient.dob;
+  const title = actionTitles[resolvedAction] ?? 'Electronic Check';
+  const tabs = actionTabs[resolvedAction] ?? { tab1: 'Eligibility Check', tab2: 'Patient Documents' };
+
   const formatDateLong = (dateStr: string) => {
     const date = new Date(dateStr);
     return date.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+  };
+
+  const bottomButtonLabel: Record<string, string> = {
+    'action-1': 'Confirm insurance details',
+    'action-2': 'Confirm patient split',
+    'action-3': 'Approve all documents',
   };
 
   return (
     <div className="fixed inset-0 z-[100] flex flex-col bg-bg-primary">
       <div className="flex flex-1 min-h-0">
         {/* ═══════════════════════════════════════════════════════ */}
-        {/* LEFT PANEL — Electronic Check                          */}
+        {/* LEFT PANEL                                              */}
         {/* ═══════════════════════════════════════════════════════ */}
         <div className="flex-1 flex flex-col min-w-0 bg-bg-primary">
           {/* Top bar */}
           <div className="flex items-center justify-between px-5 h-12 bg-white border-b border-border-secondary shrink-0">
-            <span className="text-sm font-medium text-text-primary">Electronic Check</span>
+            <span className="text-sm font-medium text-text-primary">{title}</span>
             <div className="flex items-center gap-2">
               <span className="text-xs text-text-tertiary font-medium">10d</span>
               <button className="size-7 flex items-center justify-center rounded hover:bg-bg-secondary transition-colors cursor-pointer">
@@ -141,165 +579,47 @@ export function WorkflowSheet({ patient, open, onOpenChange }: WorkflowSheetProp
           {/* Tabs */}
           <div className="flex items-center px-5 bg-white border-b border-border-secondary shrink-0">
             <button
-              onClick={() => setActiveTab('eligibility')}
+              onClick={() => setActiveTab('primary')}
               className={cn(
                 'px-1 py-2.5 text-sm font-medium border-b-2 transition-colors cursor-pointer mr-5',
-                activeTab === 'eligibility'
+                activeTab === 'primary'
                   ? 'border-text-primary text-text-primary'
                   : 'border-transparent text-text-tertiary hover:text-text-secondary'
               )}
             >
-              Eligibility Check
+              {tabs.tab1}
             </button>
             <button
-              onClick={() => setActiveTab('documents')}
+              onClick={() => setActiveTab('secondary')}
               className={cn(
                 'px-1 py-2.5 text-sm font-medium border-b-2 transition-colors cursor-pointer',
-                activeTab === 'documents'
+                activeTab === 'secondary'
                   ? 'border-text-primary text-text-primary'
                   : 'border-transparent text-text-tertiary hover:text-text-secondary'
               )}
             >
-              Patient Documents
+              {tabs.tab2}
             </button>
           </div>
 
           {/* Scrollable content */}
           <div className="flex-1 overflow-y-auto px-5 py-5">
-            {activeTab === 'eligibility' ? (
-              <div className="max-w-[900px] space-y-3">
-                {/* ── Electronic Results (single card with sub-sections) ── */}
-                <div className="border border-border-secondary rounded-lg overflow-hidden bg-white">
-                  {/* Electronic Results header */}
-                  <button
-                    onClick={() => setElectronicResultsOpen(!electronicResultsOpen)}
-                    className="flex items-center justify-between w-full px-4 py-3.5 cursor-pointer hover:bg-bg-secondary/30 transition-colors"
-                  >
-                    <div className="flex items-center gap-3">
-                      <span className="text-base font-bold text-text-primary">Electronic Results</span>
-                      <ActiveCoverageBadge />
-                      <span className="text-xs text-text-tertiary">Verified: 03-26-2026 at 9:13:21 AM</span>
-                    </div>
-                    {electronicResultsOpen ? (
-                      <CaretUp weight="regular" className="size-4 text-text-tertiary" />
-                    ) : (
-                      <CaretDown weight="regular" className="size-4 text-text-tertiary" />
-                    )}
-                  </button>
-
-                  {electronicResultsOpen && (
-                    <>
-                      {/* ── Member Info ── */}
-                      <SubSectionHeader
-                        title="Member Info"
-                        open={memberInfoOpen}
-                        onToggle={() => setMemberInfoOpen(!memberInfoOpen)}
-                      />
-                      {memberInfoOpen && (
-                        <div className="px-5 py-4 border-t border-border-secondary">
-                          <p className="text-xs text-text-tertiary mb-4">Member</p>
-                          <InfoGrid>
-                            <InfoRow label="First Name" value={patient.firstName} />
-                            <InfoRow label="Last Name" value={patient.lastName} />
-                            <InfoRow label="Date of Birth" value={formatDate(dob)} />
-                            <InfoRow label="Gender" value="M" />
-                            <InfoRow
-                              label="Address"
-                              value={
-                                <span>
-                                  {patient.address.street}
-                                  <br />
-                                  {patient.address.city}, {patient.address.state}, {patient.address.zip}
-                                </span>
-                              }
-                            />
-                            <InfoRow label="Date of Service" value="01/01/2026" />
-                            <InfoRow label="Member ID" value={memberId} />
-                          </InfoGrid>
-                        </div>
-                      )}
-
-                      {/* ── Payer ── */}
-                      <SubSectionHeader
-                        title="Payer"
-                        open={payerOpen}
-                        onToggle={() => setPayerOpen(!payerOpen)}
-                      />
-                      {payerOpen && (
-                        <div className="px-5 py-4 border-t border-border-secondary">
-                          <InfoGrid>
-                            <InfoRow label="Payer Name" value="Unknown" />
-                            <InfoRow
-                              label="Payer Address"
-                              value={
-                                <span>
-                                  {patient.address.street}
-                                  <br />
-                                  {patient.address.city}, {patient.address.state}
-                                </span>
-                              }
-                            />
-                          </InfoGrid>
-                        </div>
-                      )}
-
-                      {/* ── Plan Info ── */}
-                      <SubSectionHeader
-                        title="Plan Info"
-                        badge={<ActiveCoverageBadge />}
-                        open={planInfoOpen}
-                        onToggle={() => setPlanInfoOpen(!planInfoOpen)}
-                      />
-                      {planInfoOpen && (
-                        <div className="px-5 py-4 border-t border-border-secondary">
-                          <InfoGrid>
-                            <InfoRow label="Plan Name" value="AmeriHealth" />
-                            <InfoRow label="Plan Type" value="PPO" />
-                            <InfoRow label="Group Number" value={groupNumber} />
-                            <InfoRow label="Eligibility Start Date" value="01/01/2026" />
-                          </InfoGrid>
-                        </div>
-                      )}
-                    </>
-                  )}
-                </div>
-
-                {/* ── Admission Summary (collapsed) ── */}
-                <div className="border border-border-secondary rounded-lg overflow-hidden bg-bg-secondary/30">
-                  <button className="flex items-center justify-between w-full px-4 py-3 cursor-pointer hover:bg-bg-secondary/50 transition-colors">
-                    <span className="text-sm font-medium text-text-primary">Admission Summary</span>
-                    <CaretDown weight="regular" className="size-4 text-text-tertiary" />
-                  </button>
-                </div>
-
-                {/* ── Benefit rows (collapsed with Active Coverage badges) ── */}
-                {[
-                  'Benefit - Health Benefit Plan Coverage',
-                  'Benefit - Durable Medical Equipment',
-                  'Benefit - Durable Medical Equipment Purchase',
-                  'Benefit - Durable Medical Equipment Rental',
-                ].map((title) => (
-                  <div key={title} className="border border-border-secondary rounded-lg overflow-hidden bg-bg-secondary/30">
-                    <button className="flex items-center justify-between w-full px-4 py-3 cursor-pointer hover:bg-bg-secondary/50 transition-colors">
-                      <div className="flex items-center gap-2.5">
-                        <span className="text-sm font-medium text-text-primary">{title}</span>
-                        <ActiveCoverageBadge />
-                      </div>
-                      <CaretDown weight="regular" className="size-4 text-text-tertiary" />
-                    </button>
-                  </div>
-                ))}
-              </div>
+            {activeTab === 'primary' ? (
+              <>
+                {resolvedAction === 'action-1' && <VerifyInsuranceContent patient={patient} />}
+                {resolvedAction === 'action-2' && <MultiPatientSplitContent patient={patient} />}
+                {resolvedAction === 'action-3' && <ValidateDocumentsContent patient={patient} />}
+              </>
             ) : (
               <div className="flex items-center justify-center h-64">
-                <p className="text-sm text-text-tertiary">Patient documents will appear here.</p>
+                <p className="text-sm text-text-tertiary">{tabs.tab2} will appear here.</p>
               </div>
             )}
           </div>
         </div>
 
         {/* ═══════════════════════════════════════════════════════ */}
-        {/* RIGHT PANEL — Patient Info & Payer sidebar             */}
+        {/* RIGHT PANEL — Patient Info sidebar                      */}
         {/* ═══════════════════════════════════════════════════════ */}
         <div className="w-[380px] shrink-0 border-l border-border-secondary bg-white flex flex-col">
           {/* Panel header */}
@@ -353,7 +673,7 @@ export function WorkflowSheet({ patient, open, onOpenChange }: WorkflowSheetProp
                 <div className="flex flex-col gap-1">
                   <label className="text-xs text-text-secondary">Provider Credential</label>
                   <div className="flex items-center justify-between h-9 px-3 border border-border-secondary rounded-md bg-white text-sm text-text-primary cursor-pointer hover:bg-bg-secondary/30 transition-colors">
-                    <span>Default • NPI 99999999999</span>
+                    <span>Default · NPI 99999999999</span>
                     <CaretDown weight="regular" className="size-3.5 text-text-tertiary" />
                   </div>
                 </div>
@@ -363,7 +683,7 @@ export function WorkflowSheet({ patient, open, onOpenChange }: WorkflowSheetProp
                     Reset
                   </button>
                   <button className="h-9 rounded-md border border-border-secondary text-sm font-medium text-text-secondary hover:bg-bg-secondary transition-colors cursor-pointer">
-                    Rerun all checks
+                    {resolvedAction === 'action-1' ? 'Rerun all checks' : 'Re-extract data'}
                   </button>
                 </div>
               </div>
@@ -372,7 +692,6 @@ export function WorkflowSheet({ patient, open, onOpenChange }: WorkflowSheetProp
             {/* ── Payer card ── */}
             <div className="px-5 py-4 space-y-4 border-b border-border-secondary">
               <div className="border border-border-secondary rounded-lg overflow-hidden">
-                {/* Payer header */}
                 <div className="flex items-center justify-between px-4 py-3 border-b border-border-secondary">
                   <div className="flex flex-col">
                     <span className="text-sm font-semibold text-text-primary">{insuranceName}</span>
@@ -383,10 +702,8 @@ export function WorkflowSheet({ patient, open, onOpenChange }: WorkflowSheetProp
                   </button>
                 </div>
 
-                {/* Select an option */}
                 <div className="px-4 py-3 space-y-2.5">
                   <p className="text-sm font-medium text-text-primary">Select an option</p>
-
                   {[
                     { id: 'benefits' as RadioOption, label: 'Ready to enter benefits' },
                     { id: 'manual' as RadioOption, label: 'Manual check' },
@@ -406,9 +723,7 @@ export function WorkflowSheet({ patient, open, onOpenChange }: WorkflowSheetProp
                       <span
                         className={cn(
                           'size-5 rounded-full border-2 shrink-0 flex items-center justify-center',
-                          selectedOption === option.id
-                            ? 'border-border-brand-primary'
-                            : 'border-border-primary'
+                          selectedOption === option.id ? 'border-border-brand-primary' : 'border-border-primary'
                         )}
                       >
                         {selectedOption === option.id && (
@@ -421,7 +736,6 @@ export function WorkflowSheet({ patient, open, onOpenChange }: WorkflowSheetProp
                 </div>
               </div>
 
-              {/* Add Payer / Re-order Payers */}
               <div className="flex items-center gap-5">
                 <button className="flex items-center gap-1.5 text-xs font-medium text-text-secondary hover:text-text-primary transition-colors cursor-pointer">
                   <Plus weight="bold" className="size-3.5" />
@@ -441,8 +755,8 @@ export function WorkflowSheet({ patient, open, onOpenChange }: WorkflowSheetProp
               <span>Select decision</span>
               <CaretDown weight="regular" className="size-3.5" />
             </div>
-            <button className="flex-1 h-9 rounded-md bg-bg-success-primary text-text-success-secondary text-sm font-medium hover:bg-bg-success-primary-hover transition-colors cursor-pointer flex items-center justify-center">
-              Everything looks right
+            <button className="flex-1 h-9 rounded-md bg-bg-success-primary text-text-success-secondary text-sm font-medium hover:bg-bg-success-primary/80 transition-colors cursor-pointer flex items-center justify-center">
+              {bottomButtonLabel[resolvedAction] ?? 'Everything looks right'}
             </button>
           </div>
         </div>

@@ -15,7 +15,7 @@ import { cn } from '@tennr/lasso/utils/cn';
 const tabConfigs: { id: StatusCategory; label: string; badge: string; icon: string; iconEl: React.ReactNode }[] = [
   {
     id: 'action_required',
-    label: 'Ready for Review',
+    label: 'Action Required',
     badge: 'bg-amber-100 text-amber-700',
     icon: 'text-amber-500',
     iconEl: (
@@ -38,7 +38,7 @@ const tabConfigs: { id: StatusCategory; label: string; badge: string; icon: stri
   },
   {
     id: 'blocked',
-    label: 'Platform Errors',
+    label: 'Blocked',
     badge: 'bg-red-100 text-red-700',
     icon: 'text-red-500',
     iconEl: (
@@ -61,7 +61,7 @@ const patientFilterCategories: FilterCategoryType[] = [
     values: [
       { id: 'on_track', label: 'On Track' },
       { id: 'missing_info', label: 'Missing Info' },
-      { id: 'needs_attention', label: 'Ready for Review' },
+      { id: 'needs_attention', label: 'Action Required' },
       { id: 'blocked', label: 'Blocked' },
       { id: 'completed', label: 'Completed' },
       { id: 'inactive', label: 'Inactive' },
@@ -143,6 +143,7 @@ export default function ExploreMvpPage() {
   const [isFilterRowVisible, setIsFilterRowVisible] = useState(false);
   const [activeCategory, setActiveCategory] = useState<StatusCategory | null>(null);
   const [workflowPatient, setWorkflowPatient] = useState<Patient | null>(null);
+  const [workflowActionId, setWorkflowActionId] = useState<string | null>(null);
 
   const statusCounts = useMemo(() => {
     const counts: Record<PatientStatus, number> = {
@@ -273,8 +274,9 @@ export default function ExploreMvpPage() {
     });
   }, []);
 
-  const handleOpenWorkflow = useCallback((patient: Patient) => {
+  const handleOpenWorkflow = useCallback((patient: Patient, actionId?: string) => {
     setWorkflowPatient(patient);
+    setWorkflowActionId(actionId ?? null);
   }, []);
 
   const table = usePatientsTable(filteredPatients, handleFilterBy, undefined, undefined, undefined, handleOpenWorkflow);
@@ -305,16 +307,14 @@ export default function ExploreMvpPage() {
             <button
               onClick={() => setActiveCategory(null)}
               className={cn(
-                'relative px-4 pb-2.5 text-sm font-medium transition-colors cursor-pointer',
+                'relative px-3 py-2 text-sm transition-colors cursor-pointer',
+                'after:absolute after:bottom-[-1px] after:left-0 after:right-0 after:h-[2px] after:rounded-full',
                 activeCategory === null
-                  ? 'text-text-primary'
-                  : 'text-text-tertiary hover:text-text-secondary'
+                  ? 'text-foreground font-medium after:bg-brand-terracotta'
+                  : 'text-muted-foreground font-normal hover:text-foreground after:bg-transparent'
               )}
             >
               Patients ({mockPatients.length})
-              {activeCategory === null && (
-                <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-text-primary rounded-full" />
-              )}
             </button>
 
             {tabConfigs.map((cat) => {
@@ -329,16 +329,14 @@ export default function ExploreMvpPage() {
                   key={cat.id}
                   onClick={() => setActiveCategory(isActive ? null : cat.id)}
                   className={cn(
-                    'relative px-4 pb-2.5 text-sm font-medium transition-colors cursor-pointer',
+                    'relative px-3 py-2 text-sm transition-colors cursor-pointer',
+                    'after:absolute after:bottom-[-1px] after:left-0 after:right-0 after:h-[2px] after:rounded-full',
                     isActive
-                      ? 'text-text-primary'
-                      : 'text-text-secondary hover:text-text-primary'
+                      ? 'text-foreground font-medium after:bg-brand-terracotta'
+                      : 'text-muted-foreground font-normal hover:text-foreground after:bg-transparent'
                   )}
                 >
                   {cat.label} ({count})
-                  {isActive && (
-                    <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-text-primary rounded-full" />
-                  )}
                 </button>
               );
             })}
@@ -359,7 +357,7 @@ export default function ExploreMvpPage() {
                       type="text"
                       value={searchValue}
                       onChange={(e) => setSearchValue(e.target.value)}
-                      placeholder="Search by patient name, date of birth, MRN, internal ID, or Run ID"
+                      placeholder="Search by patient name, date of birth, or MRN"
                       className="flex-1 bg-transparent border-none outline-none text-sm text-foreground placeholder:text-muted-foreground font-body h-full leading-[20px]"
                     />
                     {searchValue.length > 0 && (
@@ -374,23 +372,6 @@ export default function ExploreMvpPage() {
                   </div>
                 </div>
 
-                {/* View Toggles */}
-                <div className="flex items-center gap-2">
-                  <DataTableViewOptions
-                    table={table}
-                    trigger={
-                      <button className="flex items-center justify-center size-7 rounded-full border border-border bg-white shadow-xs hover:bg-accent transition-colors">
-                        <SquareHalf weight="regular" className="w-4 h-4 text-foreground" />
-                      </button>
-                    }
-                  />
-                  <button
-                    onClick={() => setIsFilterRowVisible(!isFilterRowVisible)}
-                    className={`flex items-center justify-center size-7 rounded-full border border-border bg-white shadow-xs hover:bg-accent transition-colors ${isFilterRowVisible ? 'bg-accent' : ''}`}
-                  >
-                    <FunnelSimple weight="regular" className="w-4 h-4 text-foreground" />
-                  </button>
-                </div>
               </div>
 
               {/* Filters Bar */}
@@ -415,7 +396,8 @@ export default function ExploreMvpPage() {
       <WorkflowSheet
         patient={workflowPatient}
         open={!!workflowPatient}
-        onOpenChange={(open) => { if (!open) setWorkflowPatient(null); }}
+        onOpenChange={(open) => { if (!open) { setWorkflowPatient(null); setWorkflowActionId(null); } }}
+        actionId={workflowActionId}
       />
     </div>
   );

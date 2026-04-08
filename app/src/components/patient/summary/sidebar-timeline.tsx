@@ -10,7 +10,7 @@ const imgAvatar = "https://www.figma.com/api/mcp/asset/77762ccd-cf45-40a3-8e54-d
 
 interface TimelineActivity {
   id: string;
-  type: 'verification' | 'document' | 'referral' | 'order_complete' | 'prior_auth' | 'comment';
+  type: 'order_created' | 'order_update' | 'patient_created' | 'patient_update';
   title: string;
   description?: string;
   author?: {
@@ -90,15 +90,18 @@ export function SidebarTimeline({ activities, onAddComment }: SidebarTimelinePro
   };
 
   // Filter activities
+  const isPatientType = (type: string) => type === 'patient_created' || type === 'patient_update';
+  const isOrderType = (type: string) => type === 'order_created' || type === 'order_update';
+
   const filteredActivities = activities.filter(activity => {
     if (filter === 'all') return true;
-    if (filter === 'comments') return activity.type === 'comment';
-    if (filter === 'automated') return activity.type !== 'comment';
+    if (filter === 'comments') return isPatientType(activity.type);
+    if (filter === 'automated') return isOrderType(activity.type);
     return true;
   });
 
-  const commentCount = activities.filter(a => a.type === 'comment').length;
-  const automatedCount = activities.filter(a => a.type !== 'comment').length;
+  const patientCount = activities.filter(a => isPatientType(a.type)).length;
+  const orderCount = activities.filter(a => isOrderType(a.type)).length;
 
   return (
     <div className="flex flex-col h-full bg-bg-white relative">
@@ -114,14 +117,14 @@ export function SidebarTimeline({ activities, onAddComment }: SidebarTimelinePro
               <p className="text-sm text-text-tertiary">
                 {filter === 'all'
                   ? 'No timeline events yet'
-                  : `No ${filter === 'comments' ? 'comments' : 'automated events'} to display`}
+                  : `No ${filter === 'comments' ? 'patient' : 'order'} events to display`}
               </p>
             </div>
           ) : (
             filteredActivities.map((activity, index) => {
               const isLast = index === filteredActivities.length - 1;
               const hasDescription = !!activity.description;
-              const isComment = activity.type === 'comment';
+              const isComment = isPatientType(activity.type);
 
               return (
                 <div
@@ -138,11 +141,11 @@ export function SidebarTimeline({ activities, onAddComment }: SidebarTimelinePro
                       "size-7",
                       isComment ? "bg-bg-quartiary" : "bg-bg-tertiary"
                     )}>
-                      {activity.type !== 'comment' ? (
+                      {isOrderType(activity.type) ? (
                         <AvatarImage src={imgAvatar} />
                       ) : null}
                       <AvatarFallback className="text-xs text-text-primary">
-                        {activity.type !== 'comment' ? 'AU' : activity.author?.initials || 'U'}
+                        {isOrderType(activity.type) ? 'AU' : activity.author?.initials || 'U'}
                       </AvatarFallback>
                     </Avatar>
                     {!isLast && (
@@ -161,11 +164,11 @@ export function SidebarTimeline({ activities, onAddComment }: SidebarTimelinePro
                         "text-[13px] leading-5",
                         isComment ? "text-text-primary font-medium" : "text-text-secondary"
                       )}>
-                        {activity.type !== 'comment' ? 'Automated' : activity.author?.name}
+                        {isOrderType(activity.type) ? 'Automated' : activity.author?.name}
                       </span>
                       <span className="text-[13px] leading-5 text-text-secondary truncate">
                         {activity.title.replace(
-                          activity.type !== 'comment' ? 'Automated ' : (activity.author?.name || '') + ' ',
+                          isOrderType(activity.type) ? 'Automated ' : (activity.author?.name || '') + ' ',
                           ''
                         )}
                       </span>
@@ -217,7 +220,7 @@ export function SidebarTimeline({ activities, onAddComment }: SidebarTimelinePro
             )}
             onClick={() => setFilter('comments')}
           >
-            Comments ({commentCount})
+            Patient ({patientCount})
           </Badge>
           <Badge
             variant="muted"
@@ -227,7 +230,7 @@ export function SidebarTimeline({ activities, onAddComment }: SidebarTimelinePro
             )}
             onClick={() => setFilter('automated')}
           >
-            Auto
+            Order ({orderCount})
           </Badge>
         </div>
 

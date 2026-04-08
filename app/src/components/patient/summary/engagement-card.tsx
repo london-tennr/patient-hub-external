@@ -38,7 +38,7 @@ export function EngagementCard({
     <div className="bg-bg-white border border-border-tertiary rounded-md shadow-xs overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-2">
-          <p className="text-sm font-medium lasso:wght-medium text-text-primary">
+          <p className="text-base font-medium lasso:wght-medium leading-6 text-text-primary">
             Engagement
           </p>
           {phone && (

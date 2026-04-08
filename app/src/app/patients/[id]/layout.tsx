@@ -72,15 +72,15 @@ const mockOrders: Order[] = [
     orderName: 'Aerosol Mask',
     orderType: 'DME',
     status: 'on_track',
-    statusUpdated: '2026-01-19',
-    orderAge: '9 days',
+    statusUpdated: '2026-03-30',
+    orderAge: '3 days',
     items: [{ id: 'LI001', description: 'Aerosol face mask', hcpcsCode: 'A7015', product: 'Vyaire AirLife Aerosol Mask', quantity: 1 }],
     stage: 'qualification',
     subStatus: 'in_progress',
     referringPractitioner: null,
     referringFacility: null,
-    dateCreated: '2026-01-10',
-    lastUpdated: '2026-01-19',
+    dateCreated: '2026-03-30',
+    lastUpdated: '2026-03-30',
     documents: [],
     notes: [],
   },
@@ -93,15 +93,15 @@ const mockOrders: Order[] = [
     orderName: 'Wheelchair',
     orderType: 'DME',
     status: 'on_track',
-    statusUpdated: '2026-01-20',
-    orderAge: '8 days',
+    statusUpdated: '2026-03-31',
+    orderAge: '2 days',
     items: [{ id: 'LI002', description: 'Standard manual wheelchair', hcpcsCode: 'K0001', product: 'Drive Medical Silver Sport 2', quantity: 1 }],
     stage: 'eligibility',
     subStatus: 'in_progress',
     referringPractitioner: 'Dr. Sarah Chen',
     referringFacility: 'Pacific Northwest Sleep Center',
-    dateCreated: '2026-01-12',
-    lastUpdated: '2026-01-20',
+    dateCreated: '2026-03-31',
+    lastUpdated: '2026-03-31',
     documents: [],
     notes: [],
   },
@@ -114,17 +114,20 @@ const mockOrders: Order[] = [
     orderName: 'CGM & Supplies',
     orderType: 'DME',
     status: 'on_track',
-    statusUpdated: '2026-01-22',
-    orderAge: '6 days',
+    statusUpdated: '2026-04-02',
+    orderAge: '1 day',
     items: [{ id: 'LI003', description: 'CGM supply allowance', hcpcsCode: 'A4239', product: 'Freestyle Libre 3 sensors', quantity: 2 }],
     stage: 'validation',
     subStatus: 'in_progress',
     referringPractitioner: null,
     referringFacility: null,
-    dateCreated: '2026-01-16',
-    lastUpdated: '2026-01-22',
+    dateCreated: '2026-04-02',
+    lastUpdated: '2026-04-02',
     documents: [],
-    notes: [],
+    notes: [
+      { id: 'N-003a', content: 'Insurance verification submitted to carrier.', author: 'Tennr System', createdAt: '2026-04-02T09:15:00Z' },
+      { id: 'N-003b', content: 'Patient confirmed current address and delivery preferences.', author: 'Jane Miller', createdAt: '2026-04-02T11:30:00Z' },
+    ],
   },
   {
     id: 'ORD-BUG',
@@ -135,17 +138,21 @@ const mockOrders: Order[] = [
     orderName: 'CPAP Machine',
     orderType: 'DME',
     status: 'rejected',
-    statusUpdated: '2026-01-18',
-    orderAge: '10 days',
+    statusUpdated: '2026-03-29',
+    orderAge: '4 days',
     items: [{ id: 'LI-BUG', description: 'CPAP device with humidifier', hcpcsCode: 'E0601', product: 'ResMed AirSense 11', quantity: 1 }],
     stage: 'eligibility',
     subStatus: 'blocked',
     referringPractitioner: 'Dr. Sarah Chen',
     referringFacility: 'Pacific Northwest Sleep Center',
-    dateCreated: '2026-01-08',
-    lastUpdated: '2026-01-18',
+    dateCreated: '2026-03-29',
+    lastUpdated: '2026-03-29',
     documents: [],
-    notes: [],
+    notes: [
+      { id: 'N-BUG1', content: 'Payer denied coverage — patient does not meet AHI threshold per LCD policy.', author: 'Tennr System', createdAt: '2026-03-29T14:22:00Z' },
+      { id: 'N-BUG2', content: 'Contacted referring provider to request updated sleep study.', author: 'Jane Miller', createdAt: '2026-03-29T16:05:00Z' },
+    ],
+    rejectionReasons: ['Patient does not meet AHI ≥ 15 threshold per LCD L33718', 'Sleep study older than 24 months'],
   },
   {
     id: 'ORD-ACT',
@@ -155,18 +162,20 @@ const mockOrders: Order[] = [
     patientDob: '1985-03-15',
     orderName: 'Nebulizer',
     orderType: 'DME',
-    status: 'missing_info',
-    statusUpdated: '2026-01-21',
-    orderAge: '7 days',
+    status: 'on_track',
+    statusUpdated: '2026-04-01',
+    orderAge: '2 days',
     items: [{ id: 'LI-ACT', description: 'Compressor nebulizer system', hcpcsCode: 'E0570', product: 'Philips InnoSpire Go', quantity: 1 }],
     stage: 'validation',
     subStatus: 'in_progress',
     referringPractitioner: 'Dr. James Park',
     referringFacility: 'Summit Health Clinic',
-    dateCreated: '2026-01-14',
-    lastUpdated: '2026-01-21',
+    dateCreated: '2026-04-01',
+    lastUpdated: '2026-04-01',
     documents: [],
-    notes: [],
+    notes: [
+      { id: 'N-ACT1', content: 'Order received from Summit Health Clinic. Beginning intake review.', author: 'Tennr System', createdAt: '2026-04-01T08:00:00Z' },
+    ],
   },
   {
     id: 'ORD004',
@@ -262,7 +271,7 @@ const mockOrders: Order[] = [
     orderType: 'DME',
     status: 'completed',
     statusUpdated: '2026-01-28',
-    orderAge: '0 days',
+    orderAge: '1 day',
     items: [{ id: 'LI008', description: 'CGM transmitter', hcpcsCode: 'A4238', product: 'Dexcom G7 Transmitter', quantity: 1 }],
     stage: 'complete',
     subStatus: 'completed',
@@ -527,129 +536,79 @@ const mockOrders: Order[] = [
   },
 ];
 
-const mockTimelineActivities = [
-  {
-    id: '1',
-    type: 'verification' as const,
-    title: 'Insurance verification initiated',
-    orderId: 'ORD-4821',
-    source: 'tennr' as const,
-    timestamp: '2026-03-30T17:07:00Z',
-  },
-  {
-    id: '2',
-    type: 'document' as const,
-    title: 'Insurance card uploaded by patient',
-    orderId: 'ORD-4821',
-    source: 'user' as const,
-    author: { name: 'Scarlett Johansson', initials: 'SJ' },
-    timestamp: '2026-03-28T14:15:00Z',
-  },
-  {
-    id: '3',
-    type: 'referral' as const,
-    title: 'Referral received from PresNow Urgent Care',
-    orderId: 'ORD-4821',
-    source: 'system' as const,
-    timestamp: '2026-03-25T11:17:00Z',
-  },
-  {
-    id: '4',
-    type: 'order_complete' as const,
-    title: 'Order completed — claim submitted',
-    orderId: 'ORD-3190',
-    source: 'system' as const,
-    timestamp: '2026-02-15T09:30:00Z',
-  },
-  {
-    id: '5',
-    type: 'prior_auth' as const,
-    title: 'Prior auth approved by Aetna',
-    orderId: 'ORD-3190',
-    source: 'system' as const,
-    timestamp: '2026-02-01T15:45:00Z',
-  },
-  {
-    id: '6',
-    type: 'prior_auth' as const,
-    title: 'Prior auth submitted to Aetna',
-    orderId: 'ORD-3190',
-    source: 'tennr' as const,
-    timestamp: '2026-01-22T10:00:00Z',
-  },
-  {
-    id: '7',
-    type: 'referral' as const,
-    title: 'Referral received from PresNow Urgent Care',
-    orderId: 'ORD-3190',
-    source: 'system' as const,
-    timestamp: '2026-01-10T08:30:00Z',
-  },
-  {
-    id: '8',
-    type: 'verification' as const,
-    title: 'Eligibility re-verified with BlueCross',
-    orderId: 'ORD-3190',
-    source: 'tennr' as const,
-    timestamp: '2026-01-08T13:20:00Z',
-  },
-  {
-    id: '9',
-    type: 'document' as const,
-    title: 'CMN form signed by Dr. Sarah Chen',
-    orderId: 'ORD-4821',
-    source: 'system' as const,
-    timestamp: '2026-01-06T16:45:00Z',
-  },
-  {
-    id: '10',
-    type: 'prior_auth' as const,
-    title: 'Prior auth request denied — resubmitted',
-    orderId: 'ORD-4821',
-    source: 'tennr' as const,
-    timestamp: '2026-01-04T11:30:00Z',
-  },
-  {
-    id: '11',
-    type: 'document' as const,
-    title: 'Sleep study report uploaded from BrightTree',
-    orderId: 'ORD-3190',
-    source: 'system' as const,
-    timestamp: '2026-01-02T09:00:00Z',
-  },
-  {
-    id: '12',
-    type: 'order_complete' as const,
-    title: 'Order fulfilled — shipped to patient',
-    orderId: 'ORD-2847',
-    source: 'system' as const,
-    timestamp: '2025-12-28T14:10:00Z',
-  },
-  {
-    id: '13',
-    type: 'verification' as const,
-    title: 'Secondary insurance verified — Medicaid',
-    orderId: 'ORD-4821',
-    source: 'tennr' as const,
-    timestamp: '2025-12-22T10:30:00Z',
-  },
-  {
-    id: '14',
-    type: 'comment' as const,
-    title: 'Patient called to confirm delivery address',
-    author: { name: 'Maria Lopez', initials: 'ML' },
-    source: 'user' as const,
-    timestamp: '2025-12-18T15:00:00Z',
-  },
-  {
-    id: '15',
-    type: 'referral' as const,
-    title: 'Referral received from Cascade Endocrinology',
-    orderId: 'ORD-4821',
-    source: 'system' as const,
-    timestamp: '2025-12-15T08:45:00Z',
-  },
+const activityTemplates: {
+  type: TimelineActivity['type'];
+  title: string;
+  descriptions: string[];
+  orderIds?: string[];
+}[] = [
+  { type: 'order_created', title: 'Create order', descriptions: ['Respiratory / Oxygen', 'CPAP / BiPAP', 'Enteral Nutrition', 'Wound Care Supplies', 'Infusion Therapy', 'Mobility / Wheelchair', 'Hospital Bed / Equipment'], orderIds: ['Order-4821', 'Order-3190', 'Order-2847', 'Order-5512', 'Order-6103'] },
+  { type: 'order_update', title: 'Update order', descriptions: ['Insurance verified', 'Prior auth submitted', 'Status changed to In Progress', 'Documents uploaded', 'Shipping address updated', 'Notes added', 'Claim submitted', 'Authorization approved'], orderIds: ['Order-4821', 'Order-3190', 'Order-2847', 'Order-5512', 'Order-6103'] },
+  { type: 'patient_created', title: 'Create patient', descriptions: [] },
+  { type: 'patient_update', title: 'Update patient', descriptions: ['Demographics updated', 'Insurance info updated', 'Phone number changed', 'Address updated', 'Primary care provider updated', 'Emergency contact added'] },
 ];
+
+const timelineUserNames: { name: string; initials: string }[] = [
+  { name: 'Sarah Chen', initials: 'SC' },
+  { name: 'Mike Rivera', initials: 'MR' },
+  { name: 'Emily Nguyen', initials: 'EN' },
+  { name: 'James Park', initials: 'JP' },
+  { name: 'Lisa Thompson', initials: 'LT' },
+  { name: 'David Kim', initials: 'DK' },
+  { name: 'Rachel Foster', initials: 'RF' },
+  { name: 'Carlos Mendez', initials: 'CM' },
+  { name: 'Amanda Wright', initials: 'AW' },
+  { name: 'Kevin O\'Brien', initials: 'KO' },
+];
+
+function generateTimelineActivities(count: number): TimelineActivity[] {
+  const activities: TimelineActivity[] = [];
+  const baseDate = new Date('2026-03-30T17:00:00Z');
+
+  for (let i = 0; i < count; i++) {
+    const seed = (i * 7 + 13) % 100;
+    const template = activityTemplates[seed % activityTemplates.length];
+    const ts = new Date(baseDate);
+    ts.setDate(ts.getDate() - Math.floor(i * 1.8));
+    ts.setHours(8 + (seed % 10), (seed * 7) % 60);
+
+    const sourceRoll = (seed * 3) % 10;
+    let source: 'tennr' | 'user' | 'system';
+    let author: { name: string; initials: string } | undefined;
+    if (sourceRoll < 4) {
+      source = 'tennr';
+    } else if (sourceRoll < 7) {
+      source = 'user';
+      author = timelineUserNames[seed % timelineUserNames.length];
+    } else {
+      source = 'system';
+    }
+
+    let description: string | undefined;
+    const orderId = template.orderIds?.[seed % template.orderIds.length];
+    if (template.descriptions.length > 0) {
+      const desc = template.descriptions[seed % template.descriptions.length];
+      description = orderId ? `${orderId} · ${desc}` : desc;
+    } else if (orderId) {
+      description = orderId;
+    }
+
+    activities.push({
+      id: String(i + 1),
+      type: template.type,
+      title: template.title,
+      description,
+      orderId: orderId?.replace('Order-', 'ORD-'),
+      source,
+      author,
+      timestamp: ts.toISOString(),
+    });
+  }
+
+  return activities;
+}
+
+const mockTimelineActivities: TimelineActivity[] = generateTimelineActivities(50);
 
 interface PatientDocument extends OrderDocument {
   orderId?: string;
@@ -658,10 +617,11 @@ interface PatientDocument extends OrderDocument {
 
 interface TimelineActivity {
   id: string;
-  type: 'verification' | 'document' | 'referral' | 'order_complete' | 'prior_auth' | 'comment';
+  type: 'order_created' | 'order_update' | 'patient_created' | 'patient_update';
   title: string;
   description?: string;
   orderId?: string;
+  source?: 'tennr' | 'user' | 'system';
   author?: {
     name: string;
     initials: string;
@@ -722,9 +682,9 @@ function PatientLayoutContent({
 
   const handleAddComment = useCallback((comment: string) => {
     const newActivity: TimelineActivity = {
-      id: `comment-${Date.now()}`,
-      type: 'comment',
-      title: 'You Commented',
+      id: `update-${Date.now()}`,
+      type: 'patient_update',
+      title: 'Update patient',
       description: comment,
       author: {
         name: 'You',

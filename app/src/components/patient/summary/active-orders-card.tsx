@@ -29,11 +29,11 @@ function getOrderIllustration(orderName: string): React.ReactNode | null {
   return null;
 }
 
-export const statusBadgeConfig: Record<OrderStatus, { label: string; variant: 'success' | 'warning' | 'destructive' | 'outline' }> = {
+export const statusBadgeConfig: Record<OrderStatus, { label: string; variant: 'success' | 'warning' | 'outline' | 'muted' }> = {
   on_track: { label: 'On Track', variant: 'success' },
-  missing_info: { label: 'Missing Info', variant: 'warning' },
-  rejected: { label: 'Rejected', variant: 'destructive' },
-  completed: { label: 'Completed', variant: 'outline' },
+  missing_info: { label: 'Action Required', variant: 'warning' },
+  rejected: { label: 'Rejected', variant: 'outline' },
+  completed: { label: 'Completed', variant: 'muted' },
 };
 
 
@@ -45,34 +45,23 @@ interface ActiveOrdersCardProps {
   hideIllustrations?: boolean;
 }
 
-export function OrderCard({ order, onSelect, hideIllustrations }: { order: Order; onSelect: (order: Order) => void; hideIllustrations?: boolean }) {
+export function OrderCard({ order, onSelect }: { order: Order; onSelect: (order: Order) => void; hideIllustrations?: boolean }) {
   const statusConfig = statusBadgeConfig[order.status];
-  const illustration = hideIllustrations ? null : getOrderIllustration(order.orderName);
 
   return (
     <button
       onClick={() => onSelect(order)}
-      className="bg-bg-white rounded-md shadow-[0_1px_4px_rgba(0,0,0,0.12)] overflow-hidden flex flex-col hover:shadow-[0_2px_8px_rgba(0,0,0,0.16)] transition-shadow text-left cursor-pointer"
+      className="bg-bg-white border border-border-tertiary rounded-md shadow-xs overflow-hidden flex flex-col hover:bg-accent/50 transition-colors text-left cursor-pointer"
     >
-      {/* Illustration */}
-      {illustration && (
-        <div className="flex items-center justify-center pt-3 text-text-tertiary">
-          {illustration}
-        </div>
-      )}
-
-      {/* Header */}
       <div className="p-3">
-        <div className="flex flex-col gap-1 min-w-0">
-          <div className="flex items-center gap-2">
+        <div className="flex flex-col gap-1.5 min-w-0">
+          <div className="flex items-center justify-between gap-2">
             <span className="text-sm font-medium lasso:wght-medium text-text-primary">{order.orderName}</span>
-            {order.status !== 'completed' && (
-              <Badge variant={statusConfig.variant} className="text-xs">
-                {statusConfig.label}
-              </Badge>
-            )}
+            <Badge variant={statusConfig.variant} className="text-xs">
+              {statusConfig.label}
+            </Badge>
           </div>
-          <span className="text-xs text-text-tertiary truncate">ID: {order.externalOrderId}</span>
+          <span className="text-xs text-text-tertiary truncate">Order {order.id}</span>
         </div>
       </div>
     </button>
@@ -199,6 +188,27 @@ function getVisiblePages(current: number, total: number): (number | 'ellipsis')[
   return pages;
 }
 
+const activeStatusLabel: Record<string, string> = {
+  on_track: 'On Track',
+  missing_info: 'Action Required',
+  rejected: 'Rejected',
+  completed: 'Completed',
+};
+
+const activeStatusVariant: Record<string, 'success' | 'warning' | 'outline' | 'secondary'> = {
+  on_track: 'secondary',
+  missing_info: 'warning',
+  rejected: 'outline',
+  completed: 'success',
+};
+
+const activeStageLabel: Record<string, string> = {
+  validation: 'Validation',
+  eligibility: 'Eligibility',
+  qualification: 'Qualification',
+  complete: 'Complete',
+};
+
 export function ActiveOrdersCard({ patientId, orders, onSelectOrder, onViewAll, hideIllustrations }: ActiveOrdersCardProps) {
   const activeOrders = orders.filter(o => o.stage !== 'complete');
   const [page, setPage] = useState(0);
@@ -210,12 +220,9 @@ export function ActiveOrdersCard({ patientId, orders, onSelectOrder, onViewAll, 
       <div className="bg-bg-white border border-border-tertiary rounded-md shadow-xs overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-2">
-          <div className="flex items-center gap-2">
-            <p className="text-sm font-medium lasso:wght-medium text-text-primary">
-              Active orders
-            </p>
-            <span className="text-[11px] text-text-tertiary">{activeOrders.length} order{activeOrders.length !== 1 ? 's' : ''}</span>
-          </div>
+          <p className="text-base font-medium lasso:wght-medium leading-6 text-text-primary">
+            Active orders
+          </p>
           <button
             onClick={onViewAll}
             className="text-sm text-text-secondary hover:text-text-primary hover:underline cursor-pointer"
@@ -226,11 +233,11 @@ export function ActiveOrdersCard({ patientId, orders, onSelectOrder, onViewAll, 
 
         {/* Order Cards */}
         {activeOrders.length === 0 ? (
-          <div className="px-4 py-3 border-t border-border-secondary">
+          <div className="px-4 py-3 border-t border-border-tertiary">
             <p className="text-sm text-text-secondary">No active orders</p>
           </div>
         ) : (
-          <div className="grid grid-cols-3 gap-3 px-4 py-3">
+          <div className="grid grid-cols-3 gap-3 px-4 py-3 border-t border-border-tertiary">
             {pagedOrders.map(order => (
               <OrderCard key={order.id} order={order} onSelect={o => onSelectOrder?.(o)} hideIllustrations={hideIllustrations} />
             ))}

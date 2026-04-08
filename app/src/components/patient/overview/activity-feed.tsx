@@ -5,7 +5,7 @@ import { Avatar, AvatarFallback } from '@tennr/lasso/avatar';
 
 interface Activity {
   id: string;
-  type: 'status_change' | 'note';
+  type: 'order_created' | 'order_update' | 'patient_created' | 'patient_update';
   description: string;
   author: string;
   timestamp: string;

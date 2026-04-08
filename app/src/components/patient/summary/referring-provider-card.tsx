@@ -29,7 +29,7 @@ function CopyableField({ label, value }: { label: string; value: string }) {
   };
 
   return (
-    <div className="flex items-center justify-between py-1.5">
+    <div className="flex items-center justify-between py-1.5 px-4 -mx-4 hover:bg-accent/50 transition-colors rounded-sm">
       <span className="text-[13px] text-text-tertiary">{label}</span>
       <span
         onClick={handleCopy}
@@ -68,7 +68,7 @@ export function ReferringProviderCard({ provider = mockProvider }: Partial<Refer
     <div className="bg-bg-white border border-border-tertiary rounded-md shadow-xs overflow-hidden">
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-2">
-        <p className="text-sm font-medium lasso:wght-medium text-text-primary">
+        <p className="text-base font-medium lasso:wght-medium leading-6 text-text-primary">
           Referring Provider
         </p>
       </div>

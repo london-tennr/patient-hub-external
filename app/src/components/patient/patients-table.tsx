@@ -19,13 +19,14 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@tennr/lasso/badge';
 import { cn } from '@tennr/lasso/utils/cn';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@tennr/lasso/tooltip';
+import { Popover, PopoverTrigger, PopoverContent } from '@tennr/lasso/popover';
 import type { Patient, PatientPriority, PatientStage, PatientStatus } from '@/types/patient';
 import { PatientStatusBadge, PatientDotIndicator } from '@/components/patient/patient-status-badge';
 
 const statusBadgeConfig: Record<PatientStatus, { label: string; variant: 'success' | 'warning' | 'destructive' | 'muted' | 'outline' | 'info' }> = {
   on_track: { label: 'On Track', variant: 'success' },
   missing_info: { label: 'Missing Info', variant: 'warning' },
-  needs_attention: { label: 'Ready for Review', variant: 'destructive' },
+  needs_attention: { label: 'Action Required', variant: 'destructive' },
   blocked: { label: 'Blocked', variant: 'destructive' },
   completed: { label: 'Completed', variant: 'muted' },
   inactive: { label: 'Inactive', variant: 'outline' },
@@ -61,6 +62,87 @@ const stageConfig: Record<PatientStage, { label: string; step: number }> = {
 };
 
 const TOTAL_STAGES = 7;
+
+function formatActivityDate(timestamp: string) {
+  const ts = new Date(timestamp);
+  return ts.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' });
+}
+
+function formatActivityTime(timestamp: string) {
+  const ts = new Date(timestamp);
+  return ts.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+}
+
+function RecentActivityCell({ patient }: { patient: Patient }) {
+  const [open, setOpen] = useState(false);
+  const activity = patient.lastActivity;
+  const recentActivities = patient.recentActivities;
+
+  if (!activity) return <span className="text-text-tertiary">—</span>;
+
+  const cellContent = (
+    <div className="flex flex-col gap-0.5">
+      <span className="text-sm text-text-primary truncate max-w-[220px]">{activity.title}</span>
+      <span className="text-xs text-text-tertiary">{formatActivityDate(activity.timestamp)}</span>
+    </div>
+  );
+
+  if (!recentActivities || recentActivities.length === 0) return cellContent;
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <button
+          className="text-left cursor-default"
+          onMouseEnter={() => setOpen(true)}
+          onMouseLeave={() => setOpen(false)}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {cellContent}
+        </button>
+      </PopoverTrigger>
+      <PopoverContent
+        side="bottom"
+        align="start"
+        className="w-[280px] p-0 shadow-lg border border-border-secondary rounded-lg"
+        onMouseEnter={() => setOpen(true)}
+        onMouseLeave={() => setOpen(false)}
+      >
+        <div className="px-3 pt-2.5 pb-1.5">
+          <p className="text-xs font-medium text-text-tertiary uppercase tracking-wide">Recent Activity</p>
+        </div>
+        <div className="flex flex-col">
+          {recentActivities.slice(0, 3).map((a, i) => (
+            <div
+              key={i}
+              className={cn(
+                'flex items-start gap-2.5 px-3 py-2',
+                i < recentActivities.slice(0, 3).length - 1 && 'border-b border-border-secondary',
+              )}
+            >
+              <div className="flex flex-col gap-0 min-w-0 w-full">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <span className="text-xs font-medium text-text-primary truncate">{a.title}</span>
+                    {a.sourceLabel && (
+                      <span className="text-[10px] text-text-tertiary shrink-0">· {a.sourceLabel}</span>
+                    )}
+                  </div>
+                  <span className="text-[11px] text-text-tertiary whitespace-nowrap shrink-0">
+                    {formatActivityDate(a.timestamp)}
+                  </span>
+                </div>
+                {a.metadata && (
+                  <span className="text-[11px] text-text-secondary truncate">{a.metadata}</span>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
 
 const stageOrder: PatientStage[] = [
   'referral_received',
@@ -124,8 +206,8 @@ function CopyableValue({ label, value }: { label: string; value: string }) {
     >
       {label} {value}
       <span className={cn(
-        'absolute -right-0.5 top-1/2 -translate-y-1/2 flex items-center justify-center size-4 rounded-sm transition-opacity',
-        copied ? 'opacity-100 bg-white shadow-xs' : 'opacity-0 group-hover:opacity-100 group-hover:bg-white group-hover:shadow-xs'
+        'ml-1 inline-flex items-center justify-center size-4 rounded-sm transition-opacity',
+        copied ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
       )}>
         {copied ? (
           <Check weight="bold" className="size-3 text-[var(--green-9)]" />
@@ -267,10 +349,10 @@ function RingProgress({ patient, onStageClick }: { patient: Patient; onStageClic
                   suffix = '';
                 } else if (stageCurrent && isBlocked) {
                   dotColor = 'bg-neutral-400';
-                  suffix = ' — Platform issue';
+                  suffix = ' — Blocked';
                 } else if (stageCurrent) {
                   dotColor = 'bg-[var(--amber-9)]';
-                  suffix = ' — Ready for review';
+                  suffix = ' — Action required';
                 } else {
                   suffix = ' — Pending';
                 }
@@ -405,9 +487,9 @@ function DotProgress({ patient }: { patient: Patient }) {
               } else if (isStageCompleted) {
                 // no suffix
               } else if (isCurrent && isBlocked) {
-                suffix = ' — Platform issue';
+                suffix = ' — Blocked';
               } else if (isCurrent && isAttention) {
-                suffix = ' — Ready for review';
+                suffix = ' — Action required';
               } else if (!isStageCompleted && !isRunning) {
                 suffix = ' — Pending';
               }
@@ -440,34 +522,39 @@ function DotProgress({ patient }: { patient: Patient }) {
 
 export type OnPreviewPatient = (patient: Patient) => void;
 
-function createColumns(onFilterBy?: OnFilterBy, onStageClick?: OnStageClick, progressStyle: ProgressStyle = 'stepper', onPreviewPatient?: OnPreviewPatient, onOpenWorkflow?: (patient: Patient) => void) {
+function createColumns(onFilterBy?: OnFilterBy, onStageClick?: OnStageClick, progressStyle: ProgressStyle = 'stepper', onPreviewPatient?: OnPreviewPatient, onOpenWorkflow?: (patient: Patient, actionId?: string) => void) {
   return [
     columnHelper.accessor((row) => `${row.firstName} ${row.lastName}`, {
       id: 'patient',
       header: 'Patient',
-      size: 220,
       cell: (info) => {
         const patient = info.row.original;
         return (
           <div className="flex flex-col gap-0.5">
             <span className="font-medium">{info.getValue()}</span>
-            <span className="text-xs text-text-secondary flex items-center gap-0.5 flex-wrap">
-              {formatDate(patient.dob)} ·{' '}
-              <CopyableValue label="MRN" value={patient.mrn} /> ·{' '}
-              <CopyableValue label="ID" value={patient.patientId} />
-            </span>
+            <span className="text-xs text-text-secondary">{formatDate(patient.dob)}</span>
           </div>
         );
       },
       enableHiding: false,
+      enableSorting: false,
+    }),
+    columnHelper.accessor('mrn', {
+      id: 'mrn',
+      header: 'MRN',
+      enableSorting: false,
+      cell: (info) => (
+        <span className="text-sm text-text-secondary">
+          <CopyableValue label="" value={info.getValue()} />
+        </span>
+      ),
     }),
     columnHelper.accessor('status', {
       id: 'status',
       header: 'Patient Status',
-      size: 180,
       cell: (info) => {
         const patient = info.row.original;
-        return <PatientStatusBadge status={patient.status} stage={patient.stage} onOpenWorkflow={() => onOpenWorkflow?.(patient)} />;
+        return <PatientStatusBadge status={patient.status} stage={patient.stage} actionCount={patient.actionCount} actionItems={patient.actionItems} onOpenWorkflow={() => onOpenWorkflow?.(patient)} onSelectAction={(actionId) => onOpenWorkflow?.(patient, actionId)} />;
       },
       sortingFn: (rowA, rowB) => {
         const priority: Record<PatientStatus, number> = {
@@ -482,48 +569,9 @@ function createColumns(onFilterBy?: OnFilterBy, onStageClick?: OnStageClick, pro
       },
     }),
     columnHelper.accessor((row) => row.lastActivity, {
-      id: 'lastActivity',
-      header: 'Last Activity',
-      cell: (info) => {
-        const activity = info.getValue();
-        if (!activity) return <span className="text-text-tertiary">—</span>;
-        const date = new Date(activity.timestamp);
-        const formatted = date.toLocaleDateString('en-US', {
-          month: '2-digit',
-          day: '2-digit',
-          year: 'numeric',
-        });
-        return (
-          <div className="flex flex-col gap-0.5">
-            <span className="text-sm text-text-primary truncate max-w-[220px]">{activity.title}</span>
-            <span className="text-xs text-text-tertiary">{formatted}</span>
-          </div>
-        );
-      },
-      size: 220,
-    }),
-    columnHelper.accessor('referralDate', {
-      id: 'referralDate',
-      header: 'Most Recent Referral',
-      size: 180,
-      cell: (info) => {
-        const date = new Date(info.getValue());
-        return date.toLocaleDateString('en-US', {
-          month: '2-digit',
-          day: '2-digit',
-          year: 'numeric',
-        });
-      },
-    }),
-    columnHelper.accessor('stage', {
-      id: 'progress',
-      header: 'Progress',
-      cell: (info) => {
-        const patient = info.row.original;
-        return <DotProgress patient={patient} />;
-      },
-      enableSorting: false,
-      size: 220,
+      id: 'activityLog',
+      header: 'Recent Activity',
+      cell: (info) => <RecentActivityCell patient={info.row.original} />,
     }),
     ...(onPreviewPatient ? [columnHelper.display({
       id: 'preview',
@@ -695,7 +743,7 @@ export function PatientsTableWithControls({
 }
 
 // Export the table hook for use in parent components
-export function usePatientsTable(patients: Patient[], onFilterBy?: OnFilterBy, onStageClick?: OnStageClick, progressStyle: ProgressStyle = 'stepper', onPreviewPatient?: OnPreviewPatient, onOpenWorkflow?: (patient: Patient) => void) {
+export function usePatientsTable(patients: Patient[], onFilterBy?: OnFilterBy, onStageClick?: OnStageClick, progressStyle: ProgressStyle = 'stepper', onPreviewPatient?: OnPreviewPatient, onOpenWorkflow?: (patient: Patient, actionId?: string) => void) {
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
   const [columnOrder, setColumnOrder] = useState<ColumnOrderState>([]);
   const [sorting, setSorting] = useState<SortingState>([{ id: 'status', desc: false }]);
@@ -722,7 +770,7 @@ export function usePatientsTable(patients: Patient[], onFilterBy?: OnFilterBy, o
       (...args) => onStageClickRef.current?.(...args),
       progressStyle,
       hasPreview ? (patient) => onPreviewPatientRef.current?.(patient) : undefined,
-      hasWorkflow ? (patient) => onOpenWorkflowRef.current?.(patient) : undefined,
+      hasWorkflow ? (patient, actionId) => onOpenWorkflowRef.current?.(patient, actionId) : undefined,
     ),
     [progressStyle, hasPreview, hasWorkflow]
   );
@@ -795,7 +843,7 @@ export function PatientsTableContent({ table, onPatientClick }: PatientsTableCon
 
   return (
     <>
-      <Table className="table-fixed">
+      <Table className="table-fixed w-full">
         <TableHeader>
           {table.getHeaderGroups().map((headerGroup) => (
             <TableRow
@@ -808,7 +856,6 @@ export function PatientsTableContent({ table, onPatientClick }: PatientsTableCon
                 return (
                   <TableHead
                     key={header.id}
-                    style={{ width: header.getSize() }}
                     className={cn(
                       'text-muted-foreground font-medium h-full',
                       canSort && 'cursor-pointer select-none hover:text-foreground transition-colors'
@@ -855,7 +902,7 @@ export function PatientsTableContent({ table, onPatientClick }: PatientsTableCon
               className="cursor-pointer h-[52px] border-b border-border hover:bg-accent/50 transition-colors group/row"
             >
               {row.getVisibleCells().map((cell) => (
-                <TableCell key={cell.id} style={{ width: cell.column.getSize() }} className="text-foreground">
+                <TableCell key={cell.id} className="text-foreground">
                   {flexRender(cell.column.columnDef.cell, cell.getContext())}
                 </TableCell>
               ))}

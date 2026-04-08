@@ -19,11 +19,11 @@ import { Badge } from '@tennr/lasso/badge';
 import { cn } from '@tennr/lasso/utils/cn';
 import type { Order, OrderStatus } from '@/types/order';
 
-const statusConfig: Record<OrderStatus, { label: string; variant: 'default' | 'warning' | 'destructive' | 'outline' }> = {
-  on_track: { label: 'On Track', variant: 'default' },
+const statusConfig: Record<OrderStatus, { label: string; variant: 'success' | 'warning' | 'outline' | 'muted' }> = {
+  on_track: { label: 'On Track', variant: 'success' },
   missing_info: { label: 'Missing Info', variant: 'warning' },
-  rejected: { label: 'Rejected', variant: 'destructive' },
-  completed: { label: 'Completed', variant: 'outline' },
+  rejected: { label: 'Rejected', variant: 'outline' },
+  completed: { label: 'Completed', variant: 'muted' },
 };
 
 const stageLabels: Record<string, string> = {

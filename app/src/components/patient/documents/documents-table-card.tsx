@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useMemo } from 'react';
-import { CaretDown, Eye, DownloadSimple } from '@phosphor-icons/react';
+import { useState, useMemo, useCallback } from 'react';
+import { CaretUp, CaretDown, Eye, DownloadSimple } from '@phosphor-icons/react';
 import { ButtonV2 } from '@tennr/lasso/buttonV2';
 import {
   Table,
@@ -60,9 +60,23 @@ function formatDate(dateString: string): string {
   });
 }
 
+type DocSortColumn = 'name' | 'type' | 'order' | 'date' | 'source';
+type SortDirection = 'asc' | 'desc';
+
 export function DocumentsTableCard({ documents, onViewDocument, className }: DocumentsTableCardProps) {
   const [selectedType, setSelectedType] = useState<string>('all');
   const [filterOpen, setFilterOpen] = useState(false);
+  const [sortColumn, setSortColumn] = useState<DocSortColumn>('date');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
+
+  const handleSort = useCallback((column: DocSortColumn) => {
+    if (sortColumn === column) {
+      setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortColumn(column);
+      setSortDirection('desc');
+    }
+  }, [sortColumn]);
 
   // Build filter options based on available documents
   const filterOptions = useMemo(() => {
@@ -76,13 +90,40 @@ export function DocumentsTableCard({ documents, onViewDocument, className }: Doc
     ];
   }, [documents]);
 
-  // Filter documents based on selected type
+  // Filter and sort documents
   const filteredDocuments = useMemo(() => {
-    if (selectedType === 'all') return documents;
-    return documents.filter(doc => doc.type === selectedType);
-  }, [documents, selectedType]);
+    let result = selectedType === 'all' ? [...documents] : documents.filter(doc => doc.type === selectedType);
+
+    const dir = sortDirection === 'asc' ? 1 : -1;
+    result.sort((a, b) => {
+      switch (sortColumn) {
+        case 'name':
+          return dir * a.name.localeCompare(b.name);
+        case 'type':
+          return dir * (documentTypeLabels[a.type] || a.type).localeCompare(documentTypeLabels[b.type] || b.type);
+        case 'order':
+          return dir * ((a as PatientDocument).orderNumber || (a as PatientDocument).orderId || '').localeCompare((b as PatientDocument).orderNumber || (b as PatientDocument).orderId || '');
+        case 'date':
+          return dir * (new Date(a.dateAdded).getTime() - new Date(b.dateAdded).getTime());
+        case 'source':
+          return dir * (sourceLabels[a.source] || a.source).localeCompare(sourceLabels[b.source] || b.source);
+        default:
+          return 0;
+      }
+    });
+
+    return result;
+  }, [documents, selectedType, sortColumn, sortDirection]);
 
   const selectedLabel = filterOptions.find(opt => opt.id === selectedType)?.label || 'All';
+
+  const columns: { key: DocSortColumn; label: string }[] = [
+    { key: 'name', label: 'Name' },
+    { key: 'type', label: 'Type' },
+    { key: 'order', label: 'Order' },
+    { key: 'date', label: 'Date' },
+    { key: 'source', label: 'Source' },
+  ];
 
   return (
     <div
@@ -91,15 +132,8 @@ export function DocumentsTableCard({ documents, onViewDocument, className }: Doc
         className
       )}
     >
-      {/* Card Header */}
-      <div className="flex items-center px-4 py-3 border-b border-border-tertiary">
-        <p className="text-base font-medium lasso:wght-medium leading-6 text-text-primary">
-          All documents
-        </p>
-      </div>
-
       {/* Filters Row */}
-      <div className="flex items-center gap-2 px-2 py-2 bg-bg-white overflow-x-auto">
+      <div className="flex items-center gap-2 px-2 py-2 bg-bg-white overflow-x-auto border-b border-border-tertiary">
         <div className="flex items-center">
           {/* Category pill */}
           <div className="flex items-center border border-border-secondary bg-bg-secondary px-2.5 py-1 rounded-l-full">
@@ -138,94 +172,104 @@ export function DocumentsTableCard({ documents, onViewDocument, className }: Doc
       </div>
 
       {/* Table */}
-      <div className="border-t border-border-tertiary">
-        <Table>
-          <TableHeader>
-            <TableRow className="bg-bg-secondary h-10 border-b border-border-secondary hover:bg-bg-secondary">
-              <TableHead className="text-text-secondary font-medium h-full pl-4 pr-2 min-w-[200px]">
-                Name
+      <Table className="table-fixed w-full">
+        <TableHeader>
+          <TableRow className="bg-bg-secondary h-10 border-b border-border hover:bg-bg-secondary">
+            {columns.map((col) => (
+              <TableHead
+                key={col.key}
+                className="text-muted-foreground font-medium h-full cursor-pointer select-none hover:text-foreground transition-colors"
+                onClick={() => handleSort(col.key)}
+              >
+                <div className="flex items-center gap-1">
+                  {col.label}
+                  <span className="flex flex-col -space-y-1">
+                    <CaretUp
+                      weight="bold"
+                      className={cn(
+                        'size-3',
+                        sortColumn === col.key && sortDirection === 'asc' ? 'text-foreground' : 'text-muted-foreground/40'
+                      )}
+                    />
+                    <CaretDown
+                      weight="bold"
+                      className={cn(
+                        'size-3',
+                        sortColumn === col.key && sortDirection === 'desc' ? 'text-foreground' : 'text-muted-foreground/40'
+                      )}
+                    />
+                  </span>
+                </div>
               </TableHead>
-              <TableHead className="text-text-secondary font-medium h-full px-2">
-                Type
-              </TableHead>
-              <TableHead className="text-text-secondary font-medium h-full px-2">
-                Order
-              </TableHead>
-              <TableHead className="text-text-secondary font-medium h-full px-2">
-                Date
-              </TableHead>
-              <TableHead className="text-text-secondary font-medium h-full px-2">
-                Source
-              </TableHead>
-              <TableHead className="text-text-secondary font-medium h-full pl-2 pr-4 text-right w-[86px]">
-                {/* Actions column - empty header */}
-              </TableHead>
+            ))}
+            <TableHead className="text-muted-foreground font-medium h-full w-[86px]">
+              {/* Actions column */}
+            </TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {filteredDocuments.length === 0 ? (
+            <TableRow>
+              <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                No documents found
+              </TableCell>
             </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredDocuments.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={6} className="text-center py-8 text-text-secondary">
-                  No documents found
+          ) : (
+            filteredDocuments.map(doc => (
+              <TableRow
+                key={doc.id}
+                className="h-[52px] border-b border-border hover:bg-accent/50 transition-colors"
+              >
+                <TableCell className="text-foreground">
+                  <span className="truncate block max-w-[200px]">{doc.name}</span>
+                </TableCell>
+                <TableCell className="text-foreground">
+                  {documentTypeLabels[doc.type] || doc.type}
+                </TableCell>
+                <TableCell className="text-foreground">
+                  {doc.orderNumber || doc.orderId || '—'}
+                </TableCell>
+                <TableCell className="text-foreground">
+                  {formatDate(doc.dateAdded)}
+                </TableCell>
+                <TableCell className="text-foreground">
+                  {sourceLabels[doc.source] || doc.source}
+                </TableCell>
+                <TableCell>
+                  <div className="flex justify-end gap-1">
+                    <ButtonV2
+                      variant="outline"
+                      size="icon"
+                      className="rounded-full size-9 border-border-secondary hover:bg-accent/50"
+                      onClick={() => onViewDocument?.(doc)}
+                    >
+                      <Eye className="size-4 text-foreground" />
+                    </ButtonV2>
+                    <ButtonV2
+                      variant="outline"
+                      size="icon"
+                      className="rounded-full size-9 border-border-secondary hover:bg-accent/50"
+                      onClick={() => {
+                        const link = document.createElement('a');
+                        link.href = doc.url;
+                        link.download = doc.name;
+                        link.click();
+                      }}
+                    >
+                      <DownloadSimple className="size-4 text-foreground" />
+                    </ButtonV2>
+                  </div>
                 </TableCell>
               </TableRow>
-            ) : (
-              filteredDocuments.map(doc => (
-                <TableRow
-                  key={doc.id}
-                  className="h-[52px] border-b border-border-secondary hover:bg-bg-primary-hover transition-colors"
-                >
-                  <TableCell className="text-text-primary pl-4 pr-2 font-normal">
-                    <span className="truncate block max-w-[200px]">{doc.name}</span>
-                  </TableCell>
-                  <TableCell className="text-text-primary px-2 font-normal">
-                    {documentTypeLabels[doc.type] || doc.type}
-                  </TableCell>
-                  <TableCell className="text-text-primary px-2 font-normal">
-                    {doc.orderNumber || doc.orderId || '—'}
-                  </TableCell>
-                  <TableCell className="text-text-primary px-2 font-normal">
-                    {formatDate(doc.dateAdded)}
-                  </TableCell>
-                  <TableCell className="text-text-primary px-2 font-normal">
-                    {sourceLabels[doc.source] || doc.source}
-                  </TableCell>
-                  <TableCell className="pl-2 pr-4">
-                    <div className="flex justify-end gap-1">
-                      <ButtonV2
-                        variant="outline"
-                        size="icon"
-                        className="rounded-full size-9 border-border-secondary hover:bg-bg-primary-hover"
-                        onClick={() => onViewDocument?.(doc)}
-                      >
-                        <Eye className="size-4 text-text-primary" />
-                      </ButtonV2>
-                      <ButtonV2
-                        variant="outline"
-                        size="icon"
-                        className="rounded-full size-9 border-border-secondary hover:bg-bg-primary-hover"
-                        onClick={() => {
-                          const link = document.createElement('a');
-                          link.href = doc.url;
-                          link.download = doc.name;
-                          link.click();
-                        }}
-                      >
-                        <DownloadSimple className="size-4 text-text-primary" />
-                      </ButtonV2>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </div>
+            ))
+          )}
+        </TableBody>
+      </Table>
 
       {/* Footer */}
-      <div className="flex items-center justify-end px-4 py-2 bg-bg-secondary border-t border-border-tertiary">
-        <p className="text-xs text-text-secondary">
-          Total: {filteredDocuments.length} document{filteredDocuments.length !== 1 ? 's' : ''}
+      <div className="flex items-center justify-between px-4 py-3 border-t border-border">
+        <p className="text-sm text-text-secondary">
+          Showing {filteredDocuments.length} of {documents.length} document{documents.length !== 1 ? 's' : ''}
         </p>
       </div>
     </div>

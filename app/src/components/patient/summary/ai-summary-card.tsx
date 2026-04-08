@@ -51,7 +51,7 @@ function generateSummary(patient: Patient, orders: Order[]): SummaryResult {
     const missingInfoOrders = orders.filter(o => o.status === 'missing_info');
     return {
       sentiment: 'warning',
-      headline: `Ready for review — ${stageLabel}`,
+      headline: `Action required — ${stageLabel}`,
       body: `Patient is currently at ${stageLabel} and is ready for review. ${missingInfoOrders.length > 0 ? `${missingInfoOrders.length} order${missingInfoOrders.length > 1 ? 's are' : ' is'} missing information that needs to be resolved before proceeding.` : 'Review the current stage to identify what is needed to move forward.'}`,
       nextSteps: [
         ...missingInfoOrders.map(o => `${o.orderName} (${o.externalOrderId}): Provide missing info to continue ${o.stage} stage`),
@@ -98,7 +98,7 @@ export function AiSummaryCard({ patient, orders }: AiSummaryCardProps) {
       {/* Header */}
       <div className="flex items-center gap-2 px-4 py-2">
         <Sparkle weight="duotone" className="size-4 text-text-ai-primary" />
-        <p className="text-sm font-medium lasso:wght-medium text-text-primary">AI Summary</p>
+        <p className="text-base font-medium lasso:wght-medium leading-6 text-text-primary">AI Summary</p>
         <span className="text-[11px] text-text-tertiary">Auto-generated</span>
       </div>
 

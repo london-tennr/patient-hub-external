@@ -21,7 +21,7 @@ function CopyableField({ label, value }: { label: string; value: string }) {
   };
 
   return (
-    <div className="flex items-center justify-between py-1.5">
+    <div className="flex items-center justify-between py-1.5 px-4 -mx-4 hover:bg-accent/50 transition-colors rounded-sm">
       <span className="text-[13px] text-text-tertiary">{label}</span>
       <span
         onClick={handleCopy}
@@ -54,7 +54,7 @@ export function PayerContactCard({ insurance }: PayerContactCardProps) {
     return (
       <div className="bg-bg-white border border-border-tertiary rounded-md shadow-xs overflow-hidden">
         <div className="flex items-center justify-between px-4 py-2">
-          <p className="text-sm font-medium lasso:wght-medium text-text-primary">
+          <p className="text-base font-medium lasso:wght-medium leading-6 text-text-primary">
             Payer Contact
           </p>
         </div>
@@ -69,7 +69,7 @@ export function PayerContactCard({ insurance }: PayerContactCardProps) {
     <div className="bg-bg-white border border-border-tertiary rounded-md shadow-xs overflow-hidden">
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-2">
-        <p className="text-sm font-medium lasso:wght-medium text-text-primary">
+        <p className="text-base font-medium lasso:wght-medium leading-6 text-text-primary">
           Payer Contact
         </p>
         <Badge variant={statusVariant[insurance.status]} className="text-[10px] capitalize h-5">
@@ -92,7 +92,7 @@ export function PayerContactCard({ insurance }: PayerContactCardProps) {
           />
         )}
         {insurance.lastVerified && (
-          <div className="flex items-center justify-between py-1.5">
+          <div className="flex items-center justify-between py-1.5 px-4 -mx-4 hover:bg-accent/50 transition-colors rounded-sm">
             <span className="text-[13px] text-text-tertiary">Last Verified</span>
             <span className="text-[13px] text-text-primary">
               {new Date(insurance.lastVerified).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}

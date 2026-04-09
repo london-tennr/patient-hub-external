@@ -5,7 +5,6 @@ import {
   X,
   ArrowSquareOut,
   CalendarBlank,
-  Flag,
   CaretUp,
   CaretDown,
   CheckCircle,
@@ -16,11 +15,10 @@ import {
   FileText,
   IdentificationCard,
   Users,
-  MagnifyingGlass,
-  UploadSimple,
   Eye,
 } from '@phosphor-icons/react';
 import { Input } from '@tennr/lasso/input';
+import { Badge } from '@tennr/lasso/badge';
 import { cn } from '@tennr/lasso/utils/cn';
 import type { Patient } from '@/types/patient';
 
@@ -33,43 +31,14 @@ type RadioOption = 'benefits' | 'manual' | 'reach_out' | 'phone_call';
 function InfoRow({ label, value, highlight }: { label: string; value: string | React.ReactNode; highlight?: boolean }) {
   return (
     <div className="flex flex-col gap-0.5">
-      <span className="text-xs font-semibold text-text-primary">{label}</span>
-      <span className={cn('text-sm', highlight ? 'text-text-error-primary font-medium' : 'text-text-secondary')}>{value}</span>
+      <span className="text-[11px] text-text-tertiary">{label}</span>
+      <span className={cn('text-xs text-text-primary', highlight && 'text-text-warning-primary')}>{value}</span>
     </div>
   );
 }
 
 function InfoGrid({ children }: { children: React.ReactNode }) {
-  return <div className="grid grid-cols-2 gap-x-8 gap-y-4">{children}</div>;
-}
-
-// ─── Active Coverage Badge ──────────────────────────────────────────────────
-
-function ActiveCoverageBadge() {
-  return (
-    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-bg-success-primary text-text-success-secondary text-xs font-medium">
-      <CheckCircle weight="fill" className="size-3 text-icon-success-primary" />
-      Active Coverage
-    </span>
-  );
-}
-
-function ErrorBadge({ label }: { label: string }) {
-  return (
-    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-bg-error-primary text-text-error-primary text-xs font-medium">
-      <Warning weight="fill" className="size-3" />
-      {label}
-    </span>
-  );
-}
-
-function WarningBadge({ label }: { label: string }) {
-  return (
-    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 text-xs font-medium">
-      <Warning weight="fill" className="size-3" />
-      {label}
-    </span>
-  );
+  return <div className="grid grid-cols-2 gap-x-8 gap-y-3">{children}</div>;
 }
 
 // ─── Sub-section header (flat, inside parent card) ──────────────────────────
@@ -88,16 +57,16 @@ function SubSectionHeader({
   return (
     <button
       onClick={onToggle}
-      className="flex items-center justify-between w-full px-4 py-3 bg-white hover:bg-bg-secondary/30 transition-colors cursor-pointer border-t border-border-secondary"
+      className="flex items-center justify-between w-full px-4 py-2.5 hover:bg-bg-secondary/30 transition-colors cursor-pointer border-t border-border-tertiary"
     >
-      <div className="flex items-center gap-2.5">
-        <span className="text-sm font-semibold text-text-primary">{title}</span>
+      <div className="flex items-center gap-2">
+        <span className="text-xs font-medium lasso:wght-medium text-text-primary">{title}</span>
         {badge}
       </div>
       {open ? (
-        <CaretUp weight="regular" className="size-4 text-text-tertiary" />
+        <CaretUp weight="regular" className="size-3.5 text-text-tertiary" />
       ) : (
-        <CaretDown weight="regular" className="size-4 text-text-tertiary" />
+        <CaretDown weight="regular" className="size-3.5 text-text-tertiary" />
       )}
     </button>
   );
@@ -122,33 +91,21 @@ function VerifyInsuranceContent({ patient }: { patient: Patient }) {
 
   return (
     <div className="w-full space-y-3">
-      {/* Alert banner */}
-      <div className="flex items-start gap-3 px-4 py-3 rounded-lg border border-border-error-secondary bg-bg-error-primary">
-        <Warning weight="fill" className="size-4 text-text-error-primary shrink-0 mt-0.5" />
-        <div className="flex flex-col gap-1">
-          <p className="text-sm font-medium text-text-error-primary">Member ID validation failed</p>
-          <p className="text-xs text-text-error-secondary">
-            The Member ID <span className="font-mono font-medium">{memberId}</span> does not match any active policy with Aetna.
-            Please verify the ID is correct and re-run the eligibility check.
-          </p>
-        </div>
-      </div>
-
       {/* Electronic Results */}
-      <div className="border border-border-secondary rounded-lg overflow-hidden bg-white">
+      <div className="border border-border-tertiary rounded-md overflow-hidden">
         <button
           onClick={() => setElectronicResultsOpen(!electronicResultsOpen)}
-          className="flex items-center justify-between w-full px-4 py-3.5 cursor-pointer hover:bg-bg-secondary/30 transition-colors"
+          className="flex items-center justify-between w-full px-4 py-3 cursor-pointer hover:bg-bg-secondary/30 transition-colors"
         >
-          <div className="flex items-center gap-3">
-            <span className="text-base font-bold text-text-primary">Electronic Results</span>
-            <ErrorBadge label="Verification Failed" />
-            <span className="text-xs text-text-tertiary">Attempted: 03-26-2026 at 9:13:21 AM</span>
+          <div className="flex items-center gap-2.5">
+            <span className="text-sm font-medium lasso:wght-medium text-text-primary">Electronic Results</span>
+            <Badge variant="warning" className="text-[10px]">Verification Failed</Badge>
+            <span className="text-[11px] text-text-tertiary">Mar 26, 2026 at 9:13 AM</span>
           </div>
           {electronicResultsOpen ? (
-            <CaretUp weight="regular" className="size-4 text-text-tertiary" />
+            <CaretUp weight="regular" className="size-3.5 text-text-tertiary" />
           ) : (
-            <CaretDown weight="regular" className="size-4 text-text-tertiary" />
+            <CaretDown weight="regular" className="size-3.5 text-text-tertiary" />
           )}
         </button>
 
@@ -156,8 +113,7 @@ function VerifyInsuranceContent({ patient }: { patient: Patient }) {
           <>
             <SubSectionHeader title="Member Info" open={memberInfoOpen} onToggle={() => setMemberInfoOpen(!memberInfoOpen)} />
             {memberInfoOpen && (
-              <div className="px-5 py-4 border-t border-border-secondary">
-                <p className="text-xs text-text-tertiary mb-4">Member</p>
+              <div className="px-4 py-3 border-t border-border-tertiary">
                 <InfoGrid>
                   <InfoRow label="First Name" value={patient.firstName} />
                   <InfoRow label="Last Name" value={patient.lastName} />
@@ -175,7 +131,7 @@ function VerifyInsuranceContent({ patient }: { patient: Patient }) {
 
             <SubSectionHeader title="Payer" open={payerOpen} onToggle={() => setPayerOpen(!payerOpen)} />
             {payerOpen && (
-              <div className="px-5 py-4 border-t border-border-secondary">
+              <div className="px-4 py-3 border-t border-border-tertiary">
                 <InfoGrid>
                   <InfoRow label="Payer Name" value="Aetna" />
                   <InfoRow label="Payer ID" value="60054" />
@@ -185,16 +141,16 @@ function VerifyInsuranceContent({ patient }: { patient: Patient }) {
               </div>
             )}
 
-            <SubSectionHeader title="Plan Info" badge={<ErrorBadge label="No Match" />} open={planInfoOpen} onToggle={() => setPlanInfoOpen(!planInfoOpen)} />
+            <SubSectionHeader title="Plan Info" badge={<Badge variant="warning" className="text-[10px]">No Match</Badge>} open={planInfoOpen} onToggle={() => setPlanInfoOpen(!planInfoOpen)} />
             {planInfoOpen && (
-              <div className="px-5 py-4 border-t border-border-secondary">
+              <div className="px-4 py-3 border-t border-border-tertiary">
                 <InfoGrid>
                   <InfoRow label="Plan Name" value="—" />
                   <InfoRow label="Plan Type" value="—" />
                   <InfoRow label="Group Number" value={groupNumber} />
                   <InfoRow label="Eligibility Start Date" value="—" />
                 </InfoGrid>
-                <p className="text-xs text-text-tertiary mt-4">No plan information returned. Verify member ID and payer details.</p>
+                <p className="text-[11px] text-text-tertiary mt-3">No plan information returned. Verify member ID and payer details.</p>
               </div>
             )}
           </>
@@ -203,15 +159,13 @@ function VerifyInsuranceContent({ patient }: { patient: Patient }) {
 
       {/* Benefit rows — disabled */}
       {[
-        'Benefit - Health Benefit Plan Coverage',
-        'Benefit - Durable Medical Equipment',
+        'Benefit — Health Benefit Plan Coverage',
+        'Benefit — Durable Medical Equipment',
       ].map((title) => (
-        <div key={title} className="border border-border-secondary rounded-lg overflow-hidden bg-bg-secondary/30 opacity-50">
-          <div className="flex items-center justify-between w-full px-4 py-3">
-            <div className="flex items-center gap-2.5">
-              <span className="text-sm font-medium text-text-tertiary">{title}</span>
-            </div>
-            <span className="text-xs text-text-tertiary">Pending verification</span>
+        <div key={title} className="border border-border-tertiary rounded-md overflow-hidden opacity-40">
+          <div className="flex items-center justify-between w-full px-4 py-2.5">
+            <span className="text-xs text-text-tertiary">{title}</span>
+            <span className="text-[11px] text-text-tertiary">Pending verification</span>
           </div>
         </div>
       ))}
@@ -257,83 +211,70 @@ function MultiPatientSplitContent({ patient }: { patient: Patient }) {
 
   return (
     <div className="max-w-[900px] space-y-4">
-      {/* Alert banner */}
-      <div className="flex items-start gap-3 px-4 py-3 rounded-lg border border-amber-200 bg-amber-50">
-        <Users weight="fill" className="size-4 text-amber-600 shrink-0 mt-0.5" />
-        <div className="flex flex-col gap-1">
-          <p className="text-sm font-medium text-amber-800">Multiple patients detected on this referral</p>
-          <p className="text-xs text-amber-700">
-            The uploaded referral documents contain information for <span className="font-semibold">2 patients</span>.
-            Please review the detected patients below and confirm the split before proceeding.
+      {/* Info banner */}
+      <div className="flex items-start gap-3 px-4 py-3 rounded-md border border-border-warning-secondary bg-bg-warning-primary">
+        <Users weight="fill" className="size-4 text-text-warning-secondary shrink-0 mt-0.5" />
+        <div className="flex flex-col gap-0.5">
+          <p className="text-xs font-medium lasso:wght-medium text-text-primary">Multiple patients detected</p>
+          <p className="text-[11px] text-text-secondary leading-4">
+            The uploaded referral contains information for <span className="font-medium lasso:wght-medium">2 patients</span>.
+            Review and confirm the split before proceeding.
           </p>
         </div>
       </div>
 
       {/* Source document preview */}
-      <div className="border border-border-secondary rounded-lg overflow-hidden bg-white">
-        <div className="flex items-center justify-between px-4 py-3 border-b border-border-secondary">
-          <div className="flex items-center gap-2.5">
-            <FileText weight="regular" className="size-4 text-text-secondary" />
-            <span className="text-sm font-semibold text-text-primary">Source Document</span>
-            <span className="text-xs text-text-tertiary">Johansson_referral.pdf — 12 pages</span>
+      <div className="border border-border-tertiary rounded-md overflow-hidden">
+        <div className="flex items-center justify-between px-4 py-2.5 border-b border-border-tertiary">
+          <div className="flex items-center gap-2">
+            <FileText weight="regular" className="size-3.5 text-text-tertiary" />
+            <span className="text-xs font-medium lasso:wght-medium text-text-primary">Source Document</span>
+            <span className="text-[11px] text-text-tertiary">Johansson_referral.pdf — 12 pages</span>
           </div>
-          <button className="flex items-center gap-1.5 text-xs font-medium text-text-secondary hover:text-text-primary transition-colors cursor-pointer">
-            <Eye weight="regular" className="size-3.5" />
-            View full document
+          <button className="flex items-center gap-1.5 text-[11px] text-text-secondary hover:text-text-primary transition-colors cursor-pointer">
+            <Eye weight="regular" className="size-3" />
+            View
           </button>
         </div>
-        <div className="px-4 py-3 bg-bg-secondary/30">
-          <p className="text-xs text-text-tertiary">
-            Tennr detected references to multiple patients across the document pages. The pages have been grouped by patient below.
+        <div className="px-4 py-2.5 bg-bg-secondary/30">
+          <p className="text-[11px] text-text-tertiary leading-4">
+            Pages have been grouped by patient based on document analysis.
           </p>
         </div>
       </div>
 
       {/* Detected patients */}
-      <div className="space-y-3">
-        <p className="text-xs font-semibold text-text-primary uppercase tracking-wide">Detected Patients</p>
+      <div className="space-y-2">
+        <span className="text-[11px] font-medium text-text-tertiary uppercase tracking-wider">Detected Patients</span>
         {detectedPatients.map((dp, idx) => (
           <div
             key={idx}
             className={cn(
-              'border rounded-lg overflow-hidden bg-white transition-colors cursor-pointer',
-              selectedPatients.has(idx) ? 'border-border-brand-primary' : 'border-border-secondary'
+              'border rounded-md overflow-hidden transition-colors cursor-pointer',
+              selectedPatients.has(idx) ? 'border-border-brand-primary' : 'border-border-tertiary'
             )}
             onClick={() => togglePatient(idx)}
           >
-            <div className="flex items-start gap-3 px-4 py-4">
-              {/* Checkbox */}
+            <div className="flex items-start gap-3 px-4 py-3">
               <span className={cn(
-                'size-5 rounded border-2 shrink-0 flex items-center justify-center mt-0.5 transition-colors',
+                'size-4 rounded border-2 shrink-0 flex items-center justify-center mt-0.5 transition-colors',
                 selectedPatients.has(idx) ? 'border-border-brand-primary bg-bg-brand-primary' : 'border-border-primary'
               )}>
-                {selectedPatients.has(idx) && <CheckCircle weight="fill" className="size-3.5 text-white" />}
+                {selectedPatients.has(idx) && <CheckCircle weight="fill" className="size-3 text-white" />}
               </span>
 
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-2">
-                  <IdentificationCard weight="regular" className="size-4 text-text-secondary" />
-                  <span className="text-sm font-semibold text-text-primary">{dp.name}</span>
-                  <span className={cn(
-                    'text-[10px] font-medium px-1.5 py-0.5 rounded-full',
-                    dp.confidence === 'High' ? 'bg-bg-success-primary text-text-success-secondary' : 'bg-amber-50 text-amber-700'
-                  )}>
+                  <IdentificationCard weight="regular" className="size-3.5 text-text-tertiary" />
+                  <span className="text-xs font-medium lasso:wght-medium text-text-primary">{dp.name}</span>
+                  <Badge variant={dp.confidence === 'High' ? 'success' : 'warning'} className="text-[10px]">
                     {dp.confidence} confidence
-                  </span>
+                  </Badge>
                 </div>
                 <div className="grid grid-cols-3 gap-4">
-                  <div className="flex flex-col gap-0.5">
-                    <span className="text-[11px] text-text-tertiary">DOB</span>
-                    <span className="text-xs text-text-primary">{formatDate(dp.dob)}</span>
-                  </div>
-                  <div className="flex flex-col gap-0.5">
-                    <span className="text-[11px] text-text-tertiary">Document pages</span>
-                    <span className="text-xs text-text-primary">{dp.pages}</span>
-                  </div>
-                  <div className="flex flex-col gap-0.5">
-                    <span className="text-[11px] text-text-tertiary">Order type</span>
-                    <span className="text-xs text-text-primary">{dp.orderType}</span>
-                  </div>
+                  <InfoRow label="DOB" value={formatDate(dp.dob)} />
+                  <InfoRow label="Pages" value={dp.pages} />
+                  <InfoRow label="Order type" value={dp.orderType} />
                 </div>
               </div>
             </div>
@@ -342,21 +283,21 @@ function MultiPatientSplitContent({ patient }: { patient: Patient }) {
       </div>
 
       {/* Page assignment summary */}
-      <div className="border border-border-secondary rounded-lg overflow-hidden bg-white">
-        <div className="px-4 py-3 border-b border-border-secondary">
-          <span className="text-sm font-semibold text-text-primary">Page Assignment Summary</span>
+      <div className="border border-border-tertiary rounded-md overflow-hidden">
+        <div className="px-4 py-2.5 border-b border-border-tertiary">
+          <span className="text-xs font-medium lasso:wght-medium text-text-primary">Page Assignment Summary</span>
         </div>
-        <div className="divide-y divide-border-secondary">
+        <div className="divide-y divide-border-tertiary">
           {[
             { page: 'Pages 1–4', desc: 'Referral form — Scarlett Johansson (CPAP)', patient: detectedPatients[0].name },
             { page: 'Pages 5–6', desc: 'Referral form — Robert Johansson (O2 Concentrator)', patient: detectedPatients[1].name },
             { page: 'Pages 7–8', desc: 'Sleep study results — Scarlett Johansson', patient: detectedPatients[0].name },
             { page: 'Pages 9–12', desc: 'Clinical notes — Robert Johansson', patient: detectedPatients[1].name },
           ].map((row, i) => (
-            <div key={i} className="flex items-center gap-4 px-4 py-2.5">
-              <span className="text-xs font-mono text-text-tertiary w-20 shrink-0">{row.page}</span>
-              <span className="text-xs text-text-primary flex-1">{row.desc}</span>
-              <span className="text-[11px] text-text-tertiary">{row.patient}</span>
+            <div key={i} className="flex items-center gap-4 px-4 py-2">
+              <span className="text-[11px] font-mono text-text-tertiary w-20 shrink-0">{row.page}</span>
+              <span className="text-[11px] text-text-primary flex-1">{row.desc}</span>
+              <span className="text-[10px] text-text-tertiary">{row.patient}</span>
             </div>
           ))}
         </div>
@@ -404,42 +345,42 @@ function ValidateDocumentsContent({ patient }: { patient: Patient }) {
 
   return (
     <div className="max-w-[900px] space-y-4">
-      {/* Alert banner */}
-      <div className="flex items-start gap-3 px-4 py-3 rounded-lg border border-amber-200 bg-amber-50">
-        <FileText weight="fill" className="size-4 text-amber-600 shrink-0 mt-0.5" />
-        <div className="flex flex-col gap-1">
-          <p className="text-sm font-medium text-amber-800">Document review required</p>
-          <p className="text-xs text-amber-700">
+      {/* Info banner */}
+      <div className="flex items-start gap-3 px-4 py-3 rounded-md border border-border-warning-secondary bg-bg-warning-primary">
+        <FileText weight="fill" className="size-4 text-text-warning-secondary shrink-0 mt-0.5" />
+        <div className="flex flex-col gap-0.5">
+          <p className="text-xs font-medium lasso:wght-medium text-text-primary">Document review required</p>
+          <p className="text-[11px] text-text-secondary leading-4">
             {documents.filter(d => d.status === 'needs_review').length} of {documents.length} documents
-            have extracted fields that need manual validation before the order can proceed.
+            have fields that need manual validation.
           </p>
         </div>
       </div>
 
       <div className="flex gap-4">
         {/* Document list sidebar */}
-        <div className="w-[220px] shrink-0 space-y-1.5">
+        <div className="w-[200px] shrink-0 space-y-1">
           {documents.map((doc, idx) => (
             <button
               key={idx}
               onClick={() => setSelectedDoc(idx)}
               className={cn(
-                'w-full flex items-start gap-2.5 px-3 py-2.5 rounded-lg text-left transition-colors cursor-pointer',
+                'w-full flex items-start gap-2 px-3 py-2.5 rounded-md text-left transition-colors cursor-pointer',
                 selectedDoc === idx ? 'bg-bg-secondary border border-border-secondary' : 'hover:bg-bg-secondary/50'
               )}
             >
               <FileText weight="regular" className={cn(
-                'size-4 shrink-0 mt-0.5',
-                doc.status === 'validated' ? 'text-icon-success-primary' : 'text-amber-500'
+                'size-3.5 shrink-0 mt-0.5',
+                doc.status === 'validated' ? 'text-icon-success-primary' : 'text-text-warning-secondary'
               )} />
               <div className="flex flex-col gap-0.5 min-w-0">
-                <span className="text-xs font-medium text-text-primary truncate">{doc.name}</span>
-                <span className="text-[11px] text-text-tertiary">{doc.type} · {doc.pages}p</span>
+                <span className="text-[11px] font-medium lasso:wght-medium text-text-primary truncate">{doc.name}</span>
+                <span className="text-[10px] text-text-tertiary">{doc.type} · {doc.pages}p</span>
                 {doc.status === 'needs_review' && (
-                  <span className="text-[10px] text-amber-600 font-medium">{doc.issues.length} fields to review</span>
+                  <span className="text-[10px] text-text-warning-secondary">{doc.issues.length} fields to review</span>
                 )}
                 {doc.status === 'validated' && (
-                  <span className="text-[10px] text-text-success-primary font-medium">Validated</span>
+                  <span className="text-[10px] text-text-success-primary">Validated</span>
                 )}
               </div>
             </button>
@@ -448,44 +389,42 @@ function ValidateDocumentsContent({ patient }: { patient: Patient }) {
 
         {/* Document detail panel */}
         <div className="flex-1 min-w-0">
-          <div className="border border-border-secondary rounded-lg overflow-hidden bg-white">
+          <div className="border border-border-tertiary rounded-md overflow-hidden">
             {/* Document header */}
-            <div className="flex items-center justify-between px-4 py-3 border-b border-border-secondary">
-              <div className="flex items-center gap-2.5">
-                <span className="text-sm font-semibold text-text-primary">{currentDoc.name}</span>
+            <div className="flex items-center justify-between px-4 py-2.5 border-b border-border-tertiary">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-medium lasso:wght-medium text-text-primary">{currentDoc.name}</span>
                 {currentDoc.status === 'needs_review' ? (
-                  <WarningBadge label="Needs Review" />
+                  <Badge variant="warning" className="text-[10px]">Needs Review</Badge>
                 ) : (
-                  <ActiveCoverageBadge />
+                  <Badge variant="success" className="text-[10px]">Validated</Badge>
                 )}
               </div>
-              <div className="flex items-center gap-2">
-                <button className="flex items-center gap-1.5 text-xs font-medium text-text-secondary hover:text-text-primary transition-colors cursor-pointer">
-                  <Eye weight="regular" className="size-3.5" />
-                  View PDF
-                </button>
-              </div>
+              <button className="flex items-center gap-1.5 text-[11px] text-text-secondary hover:text-text-primary transition-colors cursor-pointer">
+                <Eye weight="regular" className="size-3" />
+                View PDF
+              </button>
             </div>
 
             {/* Extracted fields */}
             {currentDoc.status === 'needs_review' ? (
-              <div className="divide-y divide-border-secondary">
+              <div className="divide-y divide-border-tertiary">
                 {currentDoc.issues.map((issue, idx) => (
-                  <div key={idx} className="px-4 py-3.5">
-                    <div className="flex items-start gap-3">
-                      <Warning weight="fill" className="size-3.5 text-amber-500 shrink-0 mt-1" />
+                  <div key={idx} className="px-4 py-3">
+                    <div className="flex items-start gap-2.5">
+                      <Warning weight="fill" className="size-3.5 text-text-warning-secondary shrink-0 mt-0.5" />
                       <div className="flex-1 min-w-0 space-y-2">
                         <div>
-                          <p className="text-xs font-semibold text-text-primary">{issue.field}</p>
-                          <p className="text-xs text-text-tertiary mt-0.5">{issue.issue}</p>
+                          <p className="text-xs font-medium lasso:wght-medium text-text-primary">{issue.field}</p>
+                          <p className="text-[11px] text-text-tertiary mt-0.5">{issue.issue}</p>
                         </div>
                         <div className="flex items-center gap-2">
-                          <span className="text-[11px] text-text-tertiary">Extracted value:</span>
-                          <span className="text-xs font-mono bg-bg-secondary px-2 py-0.5 rounded text-text-primary">{issue.extracted}</span>
+                          <span className="text-[10px] text-text-tertiary">Extracted:</span>
+                          <span className="text-[11px] font-mono bg-bg-secondary px-1.5 py-0.5 rounded text-text-primary">{issue.extracted}</span>
                         </div>
                         <div className="flex flex-col gap-1">
-                          <label className="text-[11px] text-text-tertiary">Corrected value</label>
-                          <Input defaultValue={issue.extracted === '—' ? '' : issue.extracted} className="h-8 text-xs max-w-xs" placeholder="Enter corrected value..." />
+                          <label className="text-[10px] text-text-tertiary">Corrected value</label>
+                          <Input defaultValue={issue.extracted === '—' ? '' : issue.extracted} className="h-7 text-xs max-w-xs" placeholder="Enter corrected value..." />
                         </div>
                       </div>
                     </div>
@@ -494,9 +433,9 @@ function ValidateDocumentsContent({ patient }: { patient: Patient }) {
               </div>
             ) : (
               <div className="px-4 py-8 text-center">
-                <CheckCircle weight="fill" className="size-8 text-icon-success-primary mx-auto mb-2" />
-                <p className="text-sm font-medium text-text-primary">All fields validated</p>
-                <p className="text-xs text-text-tertiary mt-1">No issues found with extracted document data.</p>
+                <CheckCircle weight="fill" className="size-6 text-icon-success-primary mx-auto mb-2" />
+                <p className="text-xs font-medium lasso:wght-medium text-text-primary">All fields validated</p>
+                <p className="text-[11px] text-text-tertiary mt-0.5">No issues found with extracted data.</p>
               </div>
             )}
           </div>
@@ -555,33 +494,37 @@ export function WorkflowSheet({ patient, open, onOpenChange, actionId }: Workflo
   return (
     <div className="fixed inset-0 z-[100] flex flex-col bg-bg-primary">
       <div className="flex flex-1 min-h-0">
-        {/* ═══════════════════════════════════════════════════════ */}
-        {/* LEFT PANEL                                              */}
-        {/* ═══════════════════════════════════════════════════════ */}
+        {/* LEFT PANEL */}
         <div className="flex-1 flex flex-col min-w-0 bg-bg-primary">
-          {/* Top bar */}
-          <div className="flex items-center justify-between px-5 h-12 bg-white border-b border-border-secondary shrink-0">
-            <span className="text-sm font-medium text-text-primary">{title}</span>
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-text-tertiary font-medium">10d</span>
-              <button className="size-7 flex items-center justify-center rounded hover:bg-bg-secondary transition-colors cursor-pointer">
-                <ArrowSquareOut weight="regular" className="size-4 text-text-tertiary" />
+          {/* Top bar with breadcrumb */}
+          <div className="flex items-center justify-between px-5 h-11 bg-bg-white border-b border-border-tertiary shrink-0">
+            <nav className="flex items-center gap-1.5 text-sm">
+              <button
+                onClick={() => onOpenChange(false)}
+                className="text-text-secondary hover:text-text-primary transition-colors cursor-pointer"
+              >
+                Patient Hub
               </button>
-              <button className="size-7 flex items-center justify-center rounded hover:bg-bg-secondary transition-colors cursor-pointer">
-                <CalendarBlank weight="regular" className="size-4 text-text-tertiary" />
+              <span className="text-text-tertiary">/</span>
+              <span className="text-text-primary font-medium">{title}</span>
+            </nav>
+            <div className="flex items-center gap-1">
+              <span className="text-[11px] text-text-tertiary mr-2">10 days open</span>
+              <button className="size-7 flex items-center justify-center rounded-md hover:bg-bg-secondary transition-colors cursor-pointer">
+                <ArrowSquareOut weight="regular" className="size-3.5 text-text-tertiary" />
               </button>
-              <button className="size-7 flex items-center justify-center rounded hover:bg-bg-secondary transition-colors cursor-pointer">
-                <Flag weight="fill" className="size-4 text-red-500" />
+              <button className="size-7 flex items-center justify-center rounded-md hover:bg-bg-secondary transition-colors cursor-pointer">
+                <CalendarBlank weight="regular" className="size-3.5 text-text-tertiary" />
               </button>
             </div>
           </div>
 
           {/* Tabs */}
-          <div className="flex items-center px-5 bg-white border-b border-border-secondary shrink-0">
+          <div className="flex items-center px-5 bg-bg-white border-b border-border-tertiary shrink-0">
             <button
               onClick={() => setActiveTab('primary')}
               className={cn(
-                'px-1 py-2.5 text-sm font-medium border-b-2 transition-colors cursor-pointer mr-5',
+                'px-1 py-2.5 text-xs font-medium border-b-2 transition-colors cursor-pointer mr-5',
                 activeTab === 'primary'
                   ? 'border-text-primary text-text-primary'
                   : 'border-transparent text-text-tertiary hover:text-text-secondary'
@@ -592,7 +535,7 @@ export function WorkflowSheet({ patient, open, onOpenChange, actionId }: Workflo
             <button
               onClick={() => setActiveTab('secondary')}
               className={cn(
-                'px-1 py-2.5 text-sm font-medium border-b-2 transition-colors cursor-pointer',
+                'px-1 py-2.5 text-xs font-medium border-b-2 transition-colors cursor-pointer',
                 activeTab === 'secondary'
                   ? 'border-text-primary text-text-primary'
                   : 'border-transparent text-text-tertiary hover:text-text-secondary'
@@ -612,98 +555,96 @@ export function WorkflowSheet({ patient, open, onOpenChange, actionId }: Workflo
               </>
             ) : (
               <div className="flex items-center justify-center h-64">
-                <p className="text-sm text-text-tertiary">{tabs.tab2} will appear here.</p>
+                <p className="text-xs text-text-tertiary">{tabs.tab2} will appear here.</p>
               </div>
             )}
           </div>
         </div>
 
-        {/* ═══════════════════════════════════════════════════════ */}
-        {/* RIGHT PANEL — Patient Info sidebar                      */}
-        {/* ═══════════════════════════════════════════════════════ */}
-        <div className="w-[380px] shrink-0 border-l border-border-secondary bg-white flex flex-col">
+        {/* RIGHT PANEL — Patient Info sidebar */}
+        <div className="w-[360px] shrink-0 border-l border-border-tertiary bg-bg-white flex flex-col">
           {/* Panel header */}
-          <div className="flex items-center justify-between px-5 h-12 border-b border-border-secondary shrink-0">
-            <span className="text-sm font-semibold text-text-primary">{fullName} | CPAP</span>
+          <div className="flex items-center justify-between px-5 h-11 border-b border-border-tertiary shrink-0">
+            <span className="text-sm font-medium lasso:wght-medium text-text-primary">{fullName} · CPAP</span>
             <button
               onClick={() => onOpenChange(false)}
-              className="size-7 flex items-center justify-center rounded hover:bg-bg-secondary transition-colors cursor-pointer"
+              className="size-7 flex items-center justify-center rounded-md hover:bg-bg-secondary transition-colors cursor-pointer"
             >
-              <X weight="regular" className="size-4 text-text-tertiary" />
+              <X weight="regular" className="size-3.5 text-text-tertiary" />
             </button>
           </div>
 
           {/* Scrollable content */}
           <div className="flex-1 overflow-y-auto">
-            {/* ── Provided Patient Info ── */}
-            <div className="border-b border-border-secondary">
-              <div className="border-l-2 border-border-brand-primary mx-5 my-4 pl-3">
-                <p className="text-xs font-semibold text-text-primary">Provided Patient Info</p>
+            {/* Provided Patient Info */}
+            <div className="border-b border-border-tertiary">
+              <div className="px-5 pt-4 pb-2">
+                <span className="text-[11px] font-medium text-text-tertiary uppercase tracking-wider">Patient Info</span>
               </div>
 
-              <div className="px-5 pb-5 space-y-4">
+              <div className="px-5 pb-4 space-y-3">
                 <div className="grid grid-cols-2 gap-3">
                   <div className="flex flex-col gap-1">
-                    <label className="text-xs text-text-secondary">First Name</label>
-                    <Input defaultValue={patient.firstName} className="h-9 text-sm" />
+                    <label className="text-[11px] text-text-tertiary">First Name</label>
+                    <Input defaultValue={patient.firstName} className="h-8 text-xs" />
                   </div>
                   <div className="flex flex-col gap-1">
-                    <label className="text-xs text-text-secondary">Last Name</label>
-                    <Input defaultValue={patient.lastName} className="h-9 text-sm" />
+                    <label className="text-[11px] text-text-tertiary">Last Name</label>
+                    <Input defaultValue={patient.lastName} className="h-8 text-xs" />
                   </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
                   <div className="flex flex-col gap-1">
-                    <label className="text-xs text-text-secondary">Date of Birth</label>
+                    <label className="text-[11px] text-text-tertiary">Date of Birth</label>
                     <div className="relative">
-                      <Input defaultValue={formatDateLong(dob)} className="h-9 text-sm pr-8" />
-                      <CalendarBlank weight="regular" className="absolute right-2.5 top-1/2 -translate-y-1/2 size-4 text-text-tertiary pointer-events-none" />
+                      <Input defaultValue={formatDateLong(dob)} className="h-8 text-xs pr-7" />
+                      <CalendarBlank weight="regular" className="absolute right-2.5 top-1/2 -translate-y-1/2 size-3.5 text-text-tertiary pointer-events-none" />
                     </div>
                   </div>
                   <div className="flex flex-col gap-1">
-                    <label className="text-xs text-text-secondary">Date of Service</label>
+                    <label className="text-[11px] text-text-tertiary">Date of Service</label>
                     <div className="relative">
-                      <Input defaultValue="March 26, 2026" className="h-9 text-sm pr-8" />
-                      <CalendarBlank weight="regular" className="absolute right-2.5 top-1/2 -translate-y-1/2 size-4 text-text-tertiary pointer-events-none" />
+                      <Input defaultValue="March 26, 2026" className="h-8 text-xs pr-7" />
+                      <CalendarBlank weight="regular" className="absolute right-2.5 top-1/2 -translate-y-1/2 size-3.5 text-text-tertiary pointer-events-none" />
                     </div>
                   </div>
                 </div>
 
                 <div className="flex flex-col gap-1">
-                  <label className="text-xs text-text-secondary">Provider Credential</label>
-                  <div className="flex items-center justify-between h-9 px-3 border border-border-secondary rounded-md bg-white text-sm text-text-primary cursor-pointer hover:bg-bg-secondary/30 transition-colors">
+                  <label className="text-[11px] text-text-tertiary">Provider Credential</label>
+                  <div className="flex items-center justify-between h-8 px-3 border border-border-secondary rounded-md text-xs text-text-primary cursor-pointer hover:bg-bg-secondary/30 transition-colors">
                     <span>Default · NPI 99999999999</span>
-                    <CaretDown weight="regular" className="size-3.5 text-text-tertiary" />
+                    <CaretDown weight="regular" className="size-3 text-text-tertiary" />
                   </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
-                  <button className="h-9 rounded-md border border-border-secondary text-sm font-medium text-text-secondary hover:bg-bg-secondary transition-colors cursor-pointer">
+                  <button className="h-8 rounded-md border border-border-secondary text-xs text-text-secondary hover:bg-bg-secondary transition-colors cursor-pointer">
                     Reset
                   </button>
-                  <button className="h-9 rounded-md border border-border-secondary text-sm font-medium text-text-secondary hover:bg-bg-secondary transition-colors cursor-pointer">
-                    {resolvedAction === 'action-1' ? 'Rerun all checks' : 'Re-extract data'}
+                  <button className="h-8 rounded-md border border-border-secondary text-xs text-text-secondary hover:bg-bg-secondary transition-colors cursor-pointer">
+                    {resolvedAction === 'action-1' ? 'Rerun checks' : 'Re-extract'}
                   </button>
                 </div>
               </div>
             </div>
 
-            {/* ── Payer card ── */}
-            <div className="px-5 py-4 space-y-4 border-b border-border-secondary">
-              <div className="border border-border-secondary rounded-lg overflow-hidden">
-                <div className="flex items-center justify-between px-4 py-3 border-b border-border-secondary">
+            {/* Payer card */}
+            <div className="px-5 py-4 space-y-3 border-b border-border-tertiary">
+              <div className="border border-border-tertiary rounded-md overflow-hidden">
+                <div className="flex items-center justify-between px-4 py-2.5 border-b border-border-tertiary">
                   <div className="flex flex-col">
-                    <span className="text-sm font-semibold text-text-primary">{insuranceName}</span>
-                    <span className="text-xs text-text-tertiary">Primary</span>
+                    <span className="text-xs font-medium lasso:wght-medium text-text-primary">{insuranceName}</span>
+                    <span className="text-[11px] text-text-tertiary">Primary</span>
                   </div>
-                  <button className="size-7 flex items-center justify-center rounded hover:bg-bg-secondary transition-colors cursor-pointer">
-                    <Trash weight="regular" className="size-4 text-text-tertiary" />
+                  <button className="size-6 flex items-center justify-center rounded-md hover:bg-bg-secondary transition-colors cursor-pointer">
+                    <Trash weight="regular" className="size-3.5 text-text-tertiary" />
                   </button>
                 </div>
 
-                <div className="px-4 py-3 space-y-2.5">
-                  <p className="text-sm font-medium text-text-primary">Select an option</p>
+                <div className="px-4 py-3 space-y-2">
+                  <p className="text-xs text-text-secondary">Select an option</p>
                   {[
                     { id: 'benefits' as RadioOption, label: 'Ready to enter benefits' },
                     { id: 'manual' as RadioOption, label: 'Manual check' },
@@ -714,20 +655,20 @@ export function WorkflowSheet({ patient, open, onOpenChange, actionId }: Workflo
                       key={option.id}
                       onClick={() => setSelectedOption(option.id)}
                       className={cn(
-                        'flex items-center gap-3 w-full px-4 py-3 rounded-lg border text-sm text-text-primary transition-colors cursor-pointer text-left',
+                        'flex items-center gap-2.5 w-full px-3 py-2.5 rounded-md border text-xs text-text-primary transition-colors cursor-pointer text-left',
                         selectedOption === option.id
                           ? 'border-border-brand-primary bg-bg-brand-secondary'
-                          : 'border-border-secondary hover:bg-bg-secondary/30'
+                          : 'border-border-tertiary hover:bg-bg-secondary/30'
                       )}
                     >
                       <span
                         className={cn(
-                          'size-5 rounded-full border-2 shrink-0 flex items-center justify-center',
+                          'size-4 rounded-full border-2 shrink-0 flex items-center justify-center',
                           selectedOption === option.id ? 'border-border-brand-primary' : 'border-border-primary'
                         )}
                       >
                         {selectedOption === option.id && (
-                          <span className="size-2.5 rounded-full bg-bg-brand-primary" />
+                          <span className="size-2 rounded-full bg-bg-brand-primary" />
                         )}
                       </span>
                       {option.label}
@@ -736,26 +677,26 @@ export function WorkflowSheet({ patient, open, onOpenChange, actionId }: Workflo
                 </div>
               </div>
 
-              <div className="flex items-center gap-5">
-                <button className="flex items-center gap-1.5 text-xs font-medium text-text-secondary hover:text-text-primary transition-colors cursor-pointer">
-                  <Plus weight="bold" className="size-3.5" />
+              <div className="flex items-center gap-4">
+                <button className="flex items-center gap-1.5 text-[11px] text-text-secondary hover:text-text-primary transition-colors cursor-pointer">
+                  <Plus weight="bold" className="size-3" />
                   Add Payer
                 </button>
-                <button className="flex items-center gap-1.5 text-xs font-medium text-text-secondary hover:text-text-primary transition-colors cursor-pointer">
-                  <ListBullets weight="regular" className="size-3.5" />
+                <button className="flex items-center gap-1.5 text-[11px] text-text-secondary hover:text-text-primary transition-colors cursor-pointer">
+                  <ListBullets weight="regular" className="size-3" />
                   Re-order Payers
                 </button>
               </div>
             </div>
           </div>
 
-          {/* ── Bottom bar ── */}
-          <div className="flex items-center gap-3 px-5 py-3 border-t border-border-secondary bg-white shrink-0">
-            <div className="flex items-center gap-1.5 h-9 px-3 border border-border-secondary rounded-md text-sm text-text-tertiary cursor-pointer hover:bg-bg-secondary/30 transition-colors">
+          {/* Bottom bar */}
+          <div className="flex items-center gap-2.5 px-5 py-3 border-t border-border-tertiary bg-bg-white shrink-0">
+            <div className="flex items-center gap-1.5 h-8 px-3 border border-border-secondary rounded-md text-xs text-text-tertiary cursor-pointer hover:bg-bg-secondary/30 transition-colors">
               <span>Select decision</span>
-              <CaretDown weight="regular" className="size-3.5" />
+              <CaretDown weight="regular" className="size-3" />
             </div>
-            <button className="flex-1 h-9 rounded-md bg-bg-success-primary text-text-success-secondary text-sm font-medium hover:bg-bg-success-primary/80 transition-colors cursor-pointer flex items-center justify-center">
+            <button className="flex-1 h-8 rounded-md bg-bg-brand-primary text-text-white text-xs font-medium lasso:wght-medium hover:bg-bg-brand-primary/90 transition-colors cursor-pointer flex items-center justify-center">
               {bottomButtonLabel[resolvedAction] ?? 'Everything looks right'}
             </button>
           </div>

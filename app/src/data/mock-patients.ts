@@ -325,7 +325,7 @@ function generateStageCompletedAt(
   return result;
 }
 
-const activityTypes = ['Create order', 'Update order', 'Create patient', 'Update patient'] as const;
+const activityTypes = ['Order created', 'Order updated', 'Patient created', 'Patient updated'] as const;
 
 const updateOrderMetadata = [
   'Status changed to In Progress',
@@ -379,11 +379,11 @@ function generateActivityEntry(referralDate: string, dayOffset: number): { title
   const { source, sourceLabel } = generateActivitySource();
 
   let metadata: string | undefined;
-  if (type === 'Create order') {
+  if (type === 'Order created') {
     metadata = `${orderId} · ${orderType}`;
-  } else if (type === 'Update order') {
+  } else if (type === 'Order updated') {
     metadata = `${orderId} · ${updateOrderMetadata[Math.floor(rand() * updateOrderMetadata.length)]}`;
-  } else if (type === 'Update patient') {
+  } else if (type === 'Patient updated') {
     metadata = updatePatientMetadata[Math.floor(rand() * updatePatientMetadata.length)];
   }
 

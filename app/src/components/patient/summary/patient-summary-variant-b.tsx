@@ -229,15 +229,15 @@ function RunCard({ run, patientName }: { run: RunEntry; patientName: string }) {
 
 const orderStatusLabel: Record<OrderStatus, string> = {
   on_track: 'On Track',
-  missing_info: 'Action Required',
+  missing_info: 'Missing Info',
   rejected: 'Rejected',
   completed: 'Completed',
 };
 
-const orderStatusVariant: Record<OrderStatus, 'success' | 'warning' | 'outline' | 'muted'> = {
+const orderStatusVariant: Record<OrderStatus, 'success' | 'warning' | 'destructive' | 'outline' | 'muted'> = {
   on_track: 'success',
   missing_info: 'warning',
-  rejected: 'outline',
+  rejected: 'destructive',
   completed: 'muted',
 };
 
@@ -337,7 +337,7 @@ function OrdersTabContent({ orders, onSelectOrder }: { orders: Order[]; onSelect
   const statusFilterOptions: { value: OrderFilterStatus; label: string }[] = [
     { value: 'all', label: 'All' },
     { value: 'on_track', label: 'On Track' },
-    { value: 'missing_info', label: 'Action Required' },
+    { value: 'missing_info', label: 'Missing Info' },
     { value: 'rejected', label: 'Rejected' },
     { value: 'completed', label: 'Completed' },
   ];
@@ -356,7 +356,7 @@ function OrdersTabContent({ orders, onSelectOrder }: { orders: Order[]; onSelect
                 type="text"
                 value={searchValue}
                 onChange={(e) => setSearchValue(e.target.value)}
-                placeholder="Search by order name, ID, facility, or practitioner"
+                placeholder="Search by order type, ID, facility, or practitioner"
                 className="flex-1 bg-transparent border-none outline-none text-sm text-text-primary placeholder:text-text-tertiary font-body h-full leading-[20px]"
               />
               {searchValue.length > 0 && (
@@ -411,17 +411,18 @@ function OrdersTabContent({ orders, onSelectOrder }: { orders: Order[]; onSelect
           <TableHeader>
             <TableRow className="bg-bg-secondary h-10 border-b border-border hover:bg-bg-secondary">
               {([
-                { key: 'orderName' as SortColumn, label: 'Order type', sortable: false },
-                { key: 'status' as SortColumn, label: 'Status', sortable: false },
-                { key: 'stage' as SortColumn, label: 'Stage', sortable: false },
-                { key: 'statusUpdated' as SortColumn, label: 'Status updated', sortable: false },
-                { key: 'orderAge' as SortColumn, label: 'Order age', sortable: true },
-                { key: 'facility' as SortColumn, label: 'Facility and Practitioner', sortable: false },
+                { key: 'orderName' as SortColumn, label: 'Order type', sortable: false, width: 'w-[14%]' },
+                { key: 'status' as SortColumn, label: 'Status', sortable: false, width: 'w-[12%]' },
+                { key: 'stage' as SortColumn, label: 'Stage', sortable: false, width: 'w-[12%]' },
+                { key: 'statusUpdated' as SortColumn, label: 'Status updated', sortable: false, width: 'w-[12%]' },
+                { key: 'orderAge' as SortColumn, label: 'Order age', sortable: true, width: 'w-[10%]' },
+                { key: 'facility' as SortColumn, label: 'Facility and Practitioner', sortable: false, width: 'w-[40%]' },
               ]).map((col) => (
                 <TableHead
                   key={col.key}
                   className={cn(
                     'text-muted-foreground font-medium h-full',
+                    col.width,
                     col.sortable && 'cursor-pointer select-none hover:text-foreground transition-colors'
                   )}
                   onClick={col.sortable ? () => handleSort(col.key) : undefined}
@@ -456,7 +457,7 @@ function OrdersTabContent({ orders, onSelectOrder }: { orders: Order[]; onSelect
               <TableRow
                 key={order.id}
                 onClick={() => onSelectOrder(order)}
-                className="cursor-pointer h-[52px] border-b border-border hover:bg-accent/50 transition-colors"
+                className="cursor-pointer h-[60px] border-b border-border hover:bg-accent/50 transition-colors"
               >
                 <TableCell className="text-foreground">
                   <span className="text-sm font-medium">{order.orderName}</span>
@@ -645,7 +646,7 @@ function LastActivityCard({ activities }: { activities: TimelineActivity[] }) {
           <div
             key={activity.id}
             className={cn(
-              'flex flex-col gap-0 px-3 py-2 hover:bg-accent/50 transition-colors',
+              'flex flex-col gap-0 px-3 py-3 hover:bg-accent/50 transition-colors',
               i < recent.length - 1 && 'border-b border-border-tertiary',
             )}
           >
@@ -654,7 +655,7 @@ function LastActivityCard({ activities }: { activities: TimelineActivity[] }) {
                 <span className="text-[13px] font-medium lasso:wght-medium text-text-primary truncate">{activity.title}</span>
                 {(() => {
                   const label = activity.source === 'user' && activity.author?.name ? activity.author.name : activity.source === 'tennr' ? 'Tennr' : activity.source === 'system' ? 'Integration' : '';
-                  return label ? <span className="text-[10px] text-text-tertiary shrink-0">· {label}</span> : null;
+                  return label ? <span className="text-[10px] text-text-tertiary shrink-0 border border-border-secondary bg-bg-secondary px-1.5 py-0.5 rounded-full">{label}</span> : null;
                 })()}
               </div>
               <span className="text-[11px] text-text-tertiary whitespace-nowrap shrink-0">
@@ -846,10 +847,10 @@ const activityIcon: Record<TimelineActivity['type'], React.ReactNode> = {
 
 const activityTypeLabel: Record<TimelineActivity['type'], string> = {
   ehr_log: 'EHR Audit',
-  order_update: 'Order Update',
-  order_created: 'Order Created',
-  patient_update: 'Patient Update',
-  patient_created: 'Patient Created',
+  order_update: 'Order updated',
+  order_created: 'Order created',
+  patient_update: 'Patient updated',
+  patient_created: 'Patient created',
   note: 'Note',
   prior_auth: 'Prior Auth',
   eligibility_benefits: 'E&B',
@@ -1078,7 +1079,9 @@ function SidebarOrderDetail({ order, patient, onClose }: { order: Order; patient
 
   const formatTimestamp = (dateStr: string) => {
     const d = new Date(dateStr + 'T00:00:00');
-    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    const date = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    const time = d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+    return `${date} at ${time}`;
   };
 
   return (
@@ -1202,23 +1205,48 @@ function SidebarOrderDetail({ order, patient, onClose }: { order: Order; patient
           </div>
         )}
 
-        {/* Referring practitioner & facility */}
-        {(order.referringPractitioner || order.referringFacility) && (
+        {/* Referring Practitioner */}
+        {order.referringPractitioner && (
           <div className="flex flex-col gap-2">
-            <span className="text-[11px] font-medium text-text-tertiary uppercase tracking-wider">Referring Provider</span>
-            <div className="border border-border-tertiary rounded-md px-3 py-2.5 flex flex-col gap-1.5">
-              {order.referringPractitioner && (
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-text-tertiary">Practitioner</span>
-                  <span className="text-sm font-medium text-text-primary">{order.referringPractitioner}</span>
-                </div>
-              )}
-              {order.referringFacility && (
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-text-tertiary">Facility</span>
-                  <span className="text-sm font-medium text-text-primary">{order.referringFacility}</span>
-                </div>
-              )}
+            <span className="text-[11px] font-medium text-text-tertiary uppercase tracking-wider">Referring Practitioner</span>
+            <div className="border border-border-tertiary rounded-md px-3 py-2.5 flex flex-col gap-2">
+              <div className="flex items-center gap-4">
+                <span className="text-xs text-text-tertiary w-20 shrink-0">Name</span>
+                <span className="text-sm font-medium text-text-primary">{order.referringPractitioner}</span>
+              </div>
+              <div className="flex items-center gap-4">
+                <span className="text-xs text-text-tertiary w-20 shrink-0">NPI</span>
+                <span className="text-sm text-text-primary">{order.referringPractitionerNpi ?? '—'}</span>
+              </div>
+              <div className="flex items-center gap-4">
+                <span className="text-xs text-text-tertiary w-20 shrink-0">Credentials</span>
+                <span className="text-sm text-text-primary">{order.referringPractitionerCredentials ?? '—'}</span>
+              </div>
+              <div className="flex items-start gap-4">
+                <span className="text-xs text-text-tertiary w-20 shrink-0">Address</span>
+                <span className="text-sm text-text-primary">{order.referringPractitionerAddress ?? '—'}</span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Referring Facility */}
+        {order.referringFacility && (
+          <div className="flex flex-col gap-2">
+            <span className="text-[11px] font-medium text-text-tertiary uppercase tracking-wider">Referring Facility</span>
+            <div className="border border-border-tertiary rounded-md px-3 py-2.5 flex flex-col gap-2">
+              <div className="flex items-center gap-4">
+                <span className="text-xs text-text-tertiary w-20 shrink-0">Name</span>
+                <span className="text-sm font-medium text-text-primary">{order.referringFacility}</span>
+              </div>
+              <div className="flex items-center gap-4">
+                <span className="text-xs text-text-tertiary w-20 shrink-0">NPI</span>
+                <span className="text-sm text-text-primary">{order.referringFacilityNpi ?? '—'}</span>
+              </div>
+              <div className="flex items-start gap-4">
+                <span className="text-xs text-text-tertiary w-20 shrink-0">Address</span>
+                <span className="text-sm text-text-primary">{order.referringFacilityAddress ?? '—'}</span>
+              </div>
             </div>
           </div>
         )}

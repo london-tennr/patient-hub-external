@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { CaretDown, CaretLeft, CaretRight } from '@phosphor-icons/react';
 import {
   Popover,
@@ -96,26 +96,54 @@ const ehrFilterOptions: { value: string; label: string }[] = [
   { value: 'eClinicalWorks', label: 'eClinicalWorks' },
 ];
 
+const typeFilterOptions: { value: string; label: string }[] = [
+  { value: 'all', label: 'All' },
+  { value: 'patient', label: 'Patient' },
+  { value: 'order', label: 'Order' },
+];
+
 export function Timeline({ activities, onSelectActivity, className, filterBy = 'source' }: TimelineProps) {
   const [selectedFilter, setSelectedFilter] = useState<string>('all');
   const [filterOpen, setFilterOpen] = useState(false);
+  const [selectedTypeFilter, setSelectedTypeFilter] = useState<string>('all');
+  const [typeFilterOpen, setTypeFilterOpen] = useState(false);
   const [page, setPage] = useState(0);
 
   const filterOptions = filterBy === 'ehrSystem' ? ehrFilterOptions : defaultFilterOptions;
   const filterLabel = filterBy === 'ehrSystem' ? 'EHR System' : 'Source';
 
   const filteredActivities = useMemo(() => {
-    if (selectedFilter === 'all') return activities;
-    if (filterBy === 'ehrSystem') {
-      return activities.filter(a => a.ehrSystem === selectedFilter);
+    let result = activities;
+
+    // Source / EHR filter
+    if (selectedFilter !== 'all') {
+      if (filterBy === 'ehrSystem') {
+        result = result.filter(a => a.ehrSystem === selectedFilter);
+      } else {
+        result = result.filter(a => a.source === selectedFilter);
+      }
     }
-    return activities.filter(a => a.source === selectedFilter);
-  }, [activities, selectedFilter, filterBy]);
+
+    // Type filter
+    if (selectedTypeFilter !== 'all') {
+      if (selectedTypeFilter === 'patient') {
+        result = result.filter(a => a.type === 'patient_created' || a.type === 'patient_update');
+      } else if (selectedTypeFilter === 'order') {
+        result = result.filter(a => a.type === 'order_created' || a.type === 'order_update');
+      }
+    }
+
+    return result;
+  }, [activities, selectedFilter, selectedTypeFilter, filterBy]);
 
   const totalPages = Math.ceil(filteredActivities.length / ITEMS_PER_PAGE);
   const pagedActivities = filteredActivities.slice(page * ITEMS_PER_PAGE, (page + 1) * ITEMS_PER_PAGE);
 
   const selectedLabel = filterOptions.find(o => o.value === selectedFilter)?.label ?? 'All';
+  const selectedTypeLabel = typeFilterOptions.find(o => o.value === selectedTypeFilter)?.label ?? 'All';
+
+  // Reset page when filters change
+  useEffect(() => { setPage(0); }, [selectedFilter, selectedTypeFilter]);
 
   const formatActivityDate = (timestamp: string) => {
     const ts = new Date(timestamp);
@@ -165,6 +193,41 @@ export function Timeline({ activities, onSelectActivity, className, filterBy = '
             </PopoverContent>
           </Popover>
         </div>
+
+        {/* Type filter */}
+        <div className="flex items-center">
+          <div className="flex items-center border border-border-secondary bg-bg-secondary px-2.5 py-1 rounded-l-full">
+            <span className="text-sm text-text-tertiary font-medium">Type</span>
+          </div>
+          <Popover open={typeFilterOpen} onOpenChange={setTypeFilterOpen}>
+            <PopoverTrigger asChild>
+              <button className="flex items-center gap-2 border border-l-0 border-border-secondary bg-bg-secondary px-2.5 py-1 rounded-r-full hover:bg-bg-tertiary transition-colors cursor-pointer">
+                <span className="text-sm text-text-primary font-medium">{selectedTypeLabel}</span>
+                <CaretDown className="size-4 text-text-primary" />
+              </button>
+            </PopoverTrigger>
+            <PopoverContent align="start" className="p-0 w-[160px]">
+              <Command>
+                <CommandList>
+                  <CommandGroup>
+                    {typeFilterOptions.map(option => (
+                      <CommandItem
+                        key={option.value}
+                        onSelect={() => {
+                          setSelectedTypeFilter(option.value);
+                          setTypeFilterOpen(false);
+                        }}
+                        className="cursor-pointer"
+                      >
+                        {option.label}
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                </CommandList>
+              </Command>
+            </PopoverContent>
+          </Popover>
+        </div>
       </div>
 
       {/* Activity List */}
@@ -182,7 +245,7 @@ export function Timeline({ activities, onSelectActivity, className, filterBy = '
               key={activity.id}
               onClick={onSelectActivity ? () => onSelectActivity(activity) : undefined}
               className={cn(
-                'flex items-start gap-2.5 px-3 py-2 text-left hover:bg-accent/50 transition-colors',
+                'flex items-start gap-2.5 px-3 py-3 text-left hover:bg-accent/50 transition-colors',
                 onSelectActivity && 'cursor-pointer',
                 !isLast && 'border-b border-border',
               )}
@@ -192,7 +255,7 @@ export function Timeline({ activities, onSelectActivity, className, filterBy = '
                   <div className="flex items-center gap-1.5 min-w-0">
                     <span className="text-[13px] font-medium lasso:wght-medium text-text-primary truncate">{activity.title}</span>
                     {getActivitySourceLabel(activity) && (
-                      <span className="text-[10px] text-text-tertiary shrink-0">· {getActivitySourceLabel(activity)}</span>
+                      <span className="text-[10px] text-text-tertiary shrink-0 border border-border-secondary bg-bg-secondary px-1.5 py-0.5 rounded-full">{getActivitySourceLabel(activity)}</span>
                     )}
                   </div>
                   <span className="text-[11px] text-text-tertiary whitespace-nowrap shrink-0">

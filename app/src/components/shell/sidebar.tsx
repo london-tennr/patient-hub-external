@@ -68,7 +68,7 @@ export function Sidebar({ collapsed = false, onCollapsedChange }: SidebarProps) 
         { label: 'Workers', href: '/workers', icon: Wrench, disabled: true },
         { label: 'Patient Hub', href: '/explore', icon: Users },
         { label: 'Historical View', href: '/historical', icon: ClockCounterClockwise, disabled: true },
-        { label: 'Notifications', href: '/notifications', icon: Bell, badge: 1, disabled: true },
+        { label: 'Notifications', href: '/notifications', icon: Bell, disabled: true },
         { label: 'Analytics', href: '/analytics', icon: ChartLineUp, disabled: true },
         { label: 'Help Center', href: '/help', icon: FileText, disabled: true },
       ],
@@ -105,6 +105,10 @@ export function Sidebar({ collapsed = false, onCollapsedChange }: SidebarProps) 
   const isItemActive = (item: NavItem) => {
     if (item.href === '/') {
       return pathname === '/';
+    }
+    // Patient Hub should stay active when viewing patient profiles
+    if (item.href === '/explore') {
+      return pathname === '/explore' || pathname.startsWith('/explore/') || pathname.startsWith('/patients/');
     }
     return pathname === item.href || pathname.startsWith(item.href + '/');
   };

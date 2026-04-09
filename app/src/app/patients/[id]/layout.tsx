@@ -113,12 +113,13 @@ const mockOrders: Order[] = [
     patientDob: '1985-03-15',
     orderName: 'CGM & Supplies',
     orderType: 'DME',
-    status: 'on_track',
+    status: 'missing_info',
     statusUpdated: '2026-04-02',
     orderAge: '1 day',
     items: [{ id: 'LI003', description: 'CGM supply allowance', hcpcsCode: 'A4239', product: 'Freestyle Libre 3 sensors', quantity: 2 }],
     stage: 'validation',
-    subStatus: 'in_progress',
+    subStatus: 'awaiting_response',
+    missingInfo: ['Physician signature on CMN form', 'Updated insurance card (front and back)'],
     referringPractitioner: null,
     referringFacility: null,
     dateCreated: '2026-04-02',
@@ -536,16 +537,46 @@ const mockOrders: Order[] = [
   },
 ];
 
+// Enrich orders with referring practitioner/facility details
+const practitionerDetails: Record<string, { npi: string; credentials: string; address: string }> = {
+  'Dr. Sarah Chen': { npi: '9296377864', credentials: 'MD, FCCP', address: '355 Washington Ave Ext, Suite 240, Albany, NY, 12205' },
+  'Dr. James Park': { npi: '1548293076', credentials: 'DO', address: '1200 NE 78th St, Suite 100, Portland, OR, 97213' },
+  'Dr. Lisa Wong': { npi: '8721450963', credentials: 'MD', address: '4500 Riverside Blvd, Suite 310, Sacramento, CA, 95822' },
+  'Dr. Michael Torres': { npi: '6039184752', credentials: 'MD, FACE', address: '820 Cascade Pkwy, Suite 150, Bellevue, WA, 98004' },
+};
+
+const facilityDetails: Record<string, { npi: string; address: string }> = {
+  'Pacific Northwest Sleep Center': { npi: '9151049346', address: '355 Washington Ave Ext, Suite 240, Albany, NY, 12205' },
+  'Pacific Northwest Medical Group': { npi: '3847291056', address: '700 NE Multnomah St, Suite 300, Portland, OR, 97232' },
+  'Summit Health Clinic': { npi: '2750183694', address: '1200 NE 78th St, Suite 100, Portland, OR, 97213' },
+  'Riverside Rehabilitation Center': { npi: '4192837560', address: '4500 Riverside Blvd, Suite 310, Sacramento, CA, 95822' },
+  'Cascade Endocrinology': { npi: '5803746129', address: '820 Cascade Pkwy, Suite 150, Bellevue, WA, 98004' },
+};
+
+for (const order of mockOrders) {
+  if (order.referringPractitioner && practitionerDetails[order.referringPractitioner]) {
+    const pd = practitionerDetails[order.referringPractitioner];
+    order.referringPractitionerNpi = pd.npi;
+    order.referringPractitionerCredentials = pd.credentials;
+    order.referringPractitionerAddress = pd.address;
+  }
+  if (order.referringFacility && facilityDetails[order.referringFacility]) {
+    const fd = facilityDetails[order.referringFacility];
+    order.referringFacilityNpi = fd.npi;
+    order.referringFacilityAddress = fd.address;
+  }
+}
+
 const activityTemplates: {
   type: TimelineActivity['type'];
   title: string;
   descriptions: string[];
   orderIds?: string[];
 }[] = [
-  { type: 'order_created', title: 'Create order', descriptions: ['Respiratory / Oxygen', 'CPAP / BiPAP', 'Enteral Nutrition', 'Wound Care Supplies', 'Infusion Therapy', 'Mobility / Wheelchair', 'Hospital Bed / Equipment'], orderIds: ['Order-4821', 'Order-3190', 'Order-2847', 'Order-5512', 'Order-6103'] },
-  { type: 'order_update', title: 'Update order', descriptions: ['Insurance verified', 'Prior auth submitted', 'Status changed to In Progress', 'Documents uploaded', 'Shipping address updated', 'Notes added', 'Claim submitted', 'Authorization approved'], orderIds: ['Order-4821', 'Order-3190', 'Order-2847', 'Order-5512', 'Order-6103'] },
-  { type: 'patient_created', title: 'Create patient', descriptions: [] },
-  { type: 'patient_update', title: 'Update patient', descriptions: ['Demographics updated', 'Insurance info updated', 'Phone number changed', 'Address updated', 'Primary care provider updated', 'Emergency contact added'] },
+  { type: 'order_created', title: 'Order created', descriptions: ['Respiratory / Oxygen', 'CPAP / BiPAP', 'Enteral Nutrition', 'Wound Care Supplies', 'Infusion Therapy', 'Mobility / Wheelchair', 'Hospital Bed / Equipment'], orderIds: ['Order-4821', 'Order-3190', 'Order-2847', 'Order-5512', 'Order-6103'] },
+  { type: 'order_update', title: 'Order updated', descriptions: ['Insurance verified', 'Prior auth submitted', 'Status changed to In Progress', 'Documents uploaded', 'Shipping address updated', 'Notes added', 'Claim submitted', 'Authorization approved'], orderIds: ['Order-4821', 'Order-3190', 'Order-2847', 'Order-5512', 'Order-6103'] },
+  { type: 'patient_created', title: 'Patient created', descriptions: [] },
+  { type: 'patient_update', title: 'Patient updated', descriptions: ['Demographics updated', 'Insurance info updated', 'Phone number changed', 'Address updated', 'Primary care provider updated', 'Emergency contact added'] },
 ];
 
 const timelineUserNames: { name: string; initials: string }[] = [
@@ -684,7 +715,7 @@ function PatientLayoutContent({
     const newActivity: TimelineActivity = {
       id: `update-${Date.now()}`,
       type: 'patient_update',
-      title: 'Update patient',
+      title: 'Patient updated',
       description: comment,
       author: {
         name: 'You',

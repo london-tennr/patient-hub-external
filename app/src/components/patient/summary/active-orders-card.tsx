@@ -29,10 +29,10 @@ function getOrderIllustration(orderName: string): React.ReactNode | null {
   return null;
 }
 
-export const statusBadgeConfig: Record<OrderStatus, { label: string; variant: 'success' | 'warning' | 'outline' | 'muted' }> = {
+export const statusBadgeConfig: Record<OrderStatus, { label: string; variant: 'success' | 'warning' | 'destructive' | 'outline' | 'muted' }> = {
   on_track: { label: 'On Track', variant: 'success' },
-  missing_info: { label: 'Action Required', variant: 'warning' },
-  rejected: { label: 'Rejected', variant: 'outline' },
+  missing_info: { label: 'Missing Info', variant: 'warning' },
+  rejected: { label: 'Rejected', variant: 'destructive' },
   completed: { label: 'Completed', variant: 'muted' },
 };
 
@@ -190,7 +190,7 @@ function getVisiblePages(current: number, total: number): (number | 'ellipsis')[
 
 const activeStatusLabel: Record<string, string> = {
   on_track: 'On Track',
-  missing_info: 'Action Required',
+  missing_info: 'Missing Info',
   rejected: 'Rejected',
   completed: 'Completed',
 };

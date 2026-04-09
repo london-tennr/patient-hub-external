@@ -25,7 +25,12 @@ export interface Order {
   statusUpdated: string;
   orderAge: string;
   referringPractitioner: string | null;
+  referringPractitionerNpi?: string;
+  referringPractitionerCredentials?: string;
+  referringPractitionerAddress?: string;
   referringFacility: string | null;
+  referringFacilityNpi?: string;
+  referringFacilityAddress?: string;
   dateCreated: string;
   lastUpdated: string;
   documents: OrderDocument[];

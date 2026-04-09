@@ -116,7 +116,7 @@ function RecentActivityCell({ patient }: { patient: Patient }) {
             <div
               key={i}
               className={cn(
-                'flex items-start gap-2.5 px-3 py-2',
+                'flex items-start gap-2.5 px-3 py-3',
                 i < recentActivities.slice(0, 3).length - 1 && 'border-b border-border-secondary',
               )}
             >
@@ -125,7 +125,7 @@ function RecentActivityCell({ patient }: { patient: Patient }) {
                   <div className="flex items-center gap-1.5 min-w-0">
                     <span className="text-xs font-medium text-text-primary truncate">{a.title}</span>
                     {a.sourceLabel && (
-                      <span className="text-[10px] text-text-tertiary shrink-0">· {a.sourceLabel}</span>
+                      <span className="text-[10px] text-text-tertiary shrink-0 border border-border-secondary bg-bg-secondary px-1.5 py-0.5 rounded-full">{a.sourceLabel}</span>
                     )}
                   </div>
                   <span className="text-[11px] text-text-tertiary whitespace-nowrap shrink-0">
@@ -571,6 +571,7 @@ function createColumns(onFilterBy?: OnFilterBy, onStageClick?: OnStageClick, pro
     columnHelper.accessor((row) => row.lastActivity, {
       id: 'activityLog',
       header: 'Recent Activity',
+      enableSorting: false,
       cell: (info) => <RecentActivityCell patient={info.row.original} />,
     }),
     ...(onPreviewPatient ? [columnHelper.display({

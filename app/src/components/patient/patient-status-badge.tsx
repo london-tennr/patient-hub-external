@@ -77,7 +77,7 @@ const statusConfigs: StatusConfig[] = [
     id: 'error',
     label: 'Blocked',
     sublabel: 'Tennr is on it',
-    description: "We're working on resolving this blocker, which may cause a delay. No action needed on your end.",
+    description: "We're working on resolving this blocker. No action needed on your end.",
     color: {
       bg: 'bg-neutral-50',
       border: 'border-neutral-200',
@@ -269,7 +269,7 @@ export function PatientStatusBadge({ status, stage, onOpenWorkflow, disablePopov
           <div className="px-3.5 pt-3 pb-3">
             <p className="text-sm font-semibold text-text-primary">Blocked</p>
             <p className="text-xs text-text-secondary mt-1">
-              We're working on resolving this blocker, which may cause a delay. No action needed on your end.
+              We're working on resolving this blocker. No action needed on your end.
             </p>
           </div>
         </PopoverContent>

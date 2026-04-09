@@ -9,7 +9,6 @@ interface PatientTabsProps {
 }
 
 const tabs = [
-  { name: 'Summary', href: '' },
   { name: 'Demographics', href: '/demographics' },
   { name: 'Insurance', href: '/insurance' },
   { name: 'Orders', href: '/orders' },

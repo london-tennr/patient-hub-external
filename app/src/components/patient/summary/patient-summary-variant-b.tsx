@@ -32,6 +32,13 @@ import {
   Database,
   NotePencil,
   PlusCircle,
+  ArrowRight,
+  User,
+  MapPin,
+  Phone,
+  Envelope,
+  FirstAid,
+  ClipboardText,
 } from '@phosphor-icons/react';
 import {
   Tabs,
@@ -43,6 +50,17 @@ import { Button } from '@tennr/lasso/button';
 import { Badge } from '@tennr/lasso/badge';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@tennr/lasso/tooltip';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@tennr/lasso/table';
+import {
+  Popover,
+  PopoverTrigger,
+  PopoverContent,
+} from '@tennr/lasso/popover';
+import {
+  Command,
+  CommandGroup,
+  CommandItem,
+  CommandList,
+} from '@tennr/lasso/command';
 import { cn } from '@tennr/lasso/utils/cn';
 import type { Patient, Insurance, PatientStage } from '@/types/patient';
 import type { Order, OrderDocument, OrderStatus, OrderStage } from '@/types/order';
@@ -61,6 +79,12 @@ import { DocumentsTableCard } from '../documents/documents-table-card';
 import { DocumentFullViewer, type ViewableDocument } from '../documents/document-full-viewer';
 import { WorkflowSheet } from '../workflow-sheet';
 
+interface ChangeLogEntry {
+  field: string;
+  before: string;
+  after: string;
+}
+
 interface TimelineActivity {
   id: string;
   type: 'ehr_log' | 'order_update' | 'order_created' | 'patient_update' | 'patient_created' | 'note' | 'prior_auth' | 'eligibility_benefits';
@@ -73,6 +97,8 @@ interface TimelineActivity {
     initials: string;
   };
   timestamp: string;
+  changeLog?: ChangeLogEntry[];
+  noteContent?: string;
 }
 
 type SidebarDetailView =
@@ -270,7 +296,7 @@ type SortDirection = 'asc' | 'desc';
 function OrdersTabContent({ orders, onSelectOrder }: { orders: Order[]; onSelectOrder: (order: Order) => void }) {
   const [searchValue, setSearchValue] = useState('');
   const [statusFilter, setStatusFilter] = useState<OrderFilterStatus>('all');
-  const [isFilterVisible, setIsFilterVisible] = useState(false);
+  const [statusFilterOpen, setStatusFilterOpen] = useState(false);
   const [sortColumn, setSortColumn] = useState<SortColumn>('orderAge');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const [page, setPage] = useState(0);
@@ -344,61 +370,65 @@ function OrdersTabContent({ orders, onSelectOrder }: { orders: Order[]; onSelect
 
   return (
     <div className="flex flex-col w-full border border-border-tertiary rounded-md overflow-hidden bg-bg-white shadow-xs">
-      {/* Top bar: Search + Filter toggle */}
-      <div className="flex flex-col w-full border-b border-border-tertiary">
-        <div className="flex items-center w-full p-2 gap-4 bg-bg-white">
-          <div className="flex-1 flex items-center h-full gap-2">
-            <div className="bg-neutral-2 flex items-center gap-1 px-3 py-1 rounded-sm shadow-xs flex-1 h-8">
-              <div className="size-4 shrink-0 flex items-center justify-center">
-                <MagnifyingGlass weight="regular" className="text-text-tertiary w-full h-full" />
-              </div>
-              <input
-                type="text"
-                value={searchValue}
-                onChange={(e) => setSearchValue(e.target.value)}
-                placeholder="Search by order type, ID, facility, or practitioner"
-                className="flex-1 bg-transparent border-none outline-none text-sm text-text-primary placeholder:text-text-tertiary font-body h-full leading-[20px]"
-              />
-              {searchValue.length > 0 && (
-                <button
-                  onClick={() => setSearchValue('')}
-                  className="size-4 shrink-0 flex items-center justify-center rounded-sm hover:bg-bg-secondary transition-colors cursor-pointer"
-                >
-                  <XIcon weight="bold" className="size-3 text-text-tertiary" />
-                </button>
-              )}
+      {/* Top bar: Search + Status filter */}
+      <div className="flex items-center w-full p-2 gap-2 bg-bg-white border-b border-border-tertiary">
+        <div className="flex-1 flex items-center h-full gap-2">
+          <div className="bg-neutral-2 flex items-center gap-1 px-3 py-1 rounded-sm shadow-xs flex-1 h-8">
+            <div className="size-4 shrink-0 flex items-center justify-center">
+              <MagnifyingGlass weight="regular" className="text-text-tertiary w-full h-full" />
             </div>
-          </div>
-          <button
-            onClick={() => setIsFilterVisible(!isFilterVisible)}
-            className={cn(
-              'flex items-center justify-center size-7 rounded-full border border-border-secondary bg-bg-white shadow-xs hover:bg-bg-secondary transition-colors cursor-pointer',
-              isFilterVisible && 'bg-bg-secondary'
-            )}
-          >
-            <FunnelSimple weight="regular" className="w-4 h-4 text-text-primary" />
-          </button>
-        </div>
-
-        {/* Filter bar */}
-        {isFilterVisible && (
-          <div className="flex items-center gap-1.5 px-2 py-1.5 bg-bg-white border-t border-border-tertiary">
-            {statusFilterOptions.map((opt) => (
+            <input
+              type="text"
+              value={searchValue}
+              onChange={(e) => setSearchValue(e.target.value)}
+              placeholder="Search by order type, ID, facility, or practitioner"
+              className="flex-1 bg-transparent border-none outline-none text-sm text-text-primary placeholder:text-text-tertiary font-body h-full leading-[20px]"
+            />
+            {searchValue.length > 0 && (
               <button
-                key={opt.value}
-                onClick={() => setStatusFilter(opt.value)}
-                className={cn(
-                  'px-2.5 py-1 rounded-md text-xs font-medium transition-colors cursor-pointer',
-                  statusFilter === opt.value
-                    ? 'bg-bg-black-solid text-text-white'
-                    : 'text-text-secondary hover:bg-bg-secondary'
-                )}
+                onClick={() => setSearchValue('')}
+                className="size-4 shrink-0 flex items-center justify-center rounded-sm hover:bg-bg-secondary transition-colors cursor-pointer"
               >
-                {opt.label}
+                <XIcon weight="bold" className="size-3 text-text-tertiary" />
               </button>
-            ))}
+            )}
           </div>
-        )}
+        </div>
+        <div className="flex items-center">
+          <div className="flex items-center border border-border-secondary bg-bg-secondary px-2.5 py-1 rounded-l-full">
+            <span className="text-sm text-text-tertiary font-medium">Status</span>
+          </div>
+          <Popover open={statusFilterOpen} onOpenChange={setStatusFilterOpen}>
+            <PopoverTrigger asChild>
+              <button className="flex items-center gap-2 border border-l-0 border-border-secondary bg-bg-secondary px-2.5 py-1 rounded-r-full hover:bg-bg-tertiary transition-colors cursor-pointer">
+                <span className="text-sm text-text-primary font-medium">
+                  {statusFilterOptions.find(o => o.value === statusFilter)?.label ?? 'All'}
+                </span>
+                <CaretDown className="size-4 text-text-primary" />
+              </button>
+            </PopoverTrigger>
+            <PopoverContent align="end" className="p-0 w-[160px]">
+              <Command>
+                <CommandList>
+                  <CommandGroup>
+                    {statusFilterOptions.map(option => (
+                      <CommandItem
+                        key={option.value}
+                        onSelect={() => {
+                          setStatusFilter(option.value);
+                          setStatusFilterOpen(false);
+                        }}
+                        className="cursor-pointer"
+                      >
+                        {option.label}
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                </CommandList>
+              </Command>
+            </PopoverContent>
+          </Popover>
+        </div>
       </div>
 
       {/* Table */}
@@ -867,71 +897,253 @@ const activityTypeBadgeVariant: Record<TimelineActivity['type'], 'outline'> = {
   eligibility_benefits: 'outline',
 };
 
-const activityDetails: Record<TimelineActivity['type'], { description: string; fields: { label: string; value: string }[] }> = {
-  order_update: {
-    description: 'An order was updated for this patient.',
-    fields: [
-      { label: 'Order Number', value: 'ORD-4821' },
-      { label: 'Status', value: 'Completed' },
-      { label: 'Submitted To', value: 'Aetna' },
-      { label: 'Total Billed', value: '$1,247.00' },
-    ],
-  },
-  order_created: {
-    description: 'A new order was created for this patient.',
-    fields: [
-      { label: 'Order Number', value: 'ORD-4821' },
-      { label: 'Type', value: 'CPAP Device' },
-    ],
-  },
-  patient_update: {
-    description: 'Patient information was updated in the system.',
-    fields: [
-      { label: 'Updated By', value: 'System' },
-      { label: 'Fields Changed', value: 'Demographics' },
-    ],
-  },
-  patient_created: {
-    description: 'Patient record was created in the system.',
-    fields: [
-      { label: 'Created By', value: 'System' },
-    ],
-  },
-  prior_auth: {
-    description: 'A prior authorization request was processed with the insurance carrier.',
-    fields: [
-      { label: 'Auth Number', value: 'PA-2026-38291' },
-      { label: 'Carrier', value: 'Aetna' },
-      { label: 'Decision', value: 'Approved' },
-      { label: 'Valid Through', value: '07/01/2026' },
-    ],
-  },
-  eligibility_benefits: {
-    description: 'An eligibility and benefits check was performed with the carrier.',
-    fields: [
-      { label: 'Carrier', value: 'Aetna' },
-      { label: 'Plan Type', value: 'PPO' },
-      { label: 'Verification Method', value: 'Electronic (270/271)' },
-      { label: 'Initiated By', value: 'System — Auto Trigger' },
-    ],
-  },
-  ehr_log: {
-    description: 'An event was synced from the EHR system.',
-    fields: [
-      { label: 'EHR System', value: 'BrightTree' },
-      { label: 'Sync Type', value: 'Automatic' },
-    ],
-  },
-  note: {
-    description: 'A note was added to this patient record.',
-    fields: [],
-  },
-};
+// Generate contextual mock change data based on activity description
+function getActivityChangeLog(activity: TimelineActivity): ChangeLogEntry[] {
+  if (activity.changeLog) return activity.changeLog;
+  const desc = (activity.description ?? '').toLowerCase();
+
+  if (activity.type === 'patient_update') {
+    if (desc.includes('address')) {
+      return [
+        { field: 'Address', before: '123 Main Street, Apt 4B, Springfield, IL 62704', after: '456 Oak Avenue, Suite 200, Riverside, CA 92501' },
+      ];
+    }
+    if (desc.includes('insurance')) {
+      return [
+        { field: 'Carrier', before: 'Blue Cross Blue Shield — Bronze HMO', after: 'Aetna — Gold PPO' },
+        { field: 'Member ID', before: 'BCBS-881234', after: 'AET-990421' },
+        { field: 'Copay', before: '$40.00', after: '$20.00' },
+      ];
+    }
+    if (desc.includes('phone')) {
+      return [
+        { field: 'Phone', before: '(555) 123-4567', after: '(555) 987-6543' },
+      ];
+    }
+    if (desc.includes('primary care')) {
+      return [
+        { field: 'Provider', before: 'Dr. Michael Torres — Springfield Family Medicine (NPI 1234567890)', after: 'Dr. Sarah Chen — Riverside Internal Medicine (NPI 0987654321)' },
+      ];
+    }
+    if (desc.includes('emergency contact')) {
+      return [
+        { field: 'Emergency Contact', before: '—', after: 'Maria Johnson (Spouse) · (555) 222-3344' },
+      ];
+    }
+    if (desc.includes('demographics')) {
+      return [
+        { field: 'Email', before: 'patient@oldmail.com', after: 'patient@newmail.com' },
+        { field: 'Preferred Language', before: 'English', after: 'Spanish' },
+      ];
+    }
+    return [
+      { field: 'Record', before: 'Previous value', after: 'Updated value' },
+    ];
+  }
+
+  if (activity.type === 'order_update') {
+    if (desc.includes('status')) {
+      return [
+        { field: 'Status', before: 'Pending', after: 'In Progress' },
+      ];
+    }
+    if (desc.includes('insurance verified')) {
+      return [
+        { field: 'Verification', before: 'Unverified', after: 'Verified — Active' },
+        { field: 'Verified By', before: '—', after: 'System (Auto)' },
+      ];
+    }
+    if (desc.includes('shipping')) {
+      return [
+        { field: 'Shipping Address', before: '123 Main St, Springfield, IL 62704', after: '456 Oak Ave, Riverside, CA 92501' },
+        { field: 'Shipping Method', before: 'Standard (5–7 business days)', after: 'Expedited (2–3 business days)' },
+      ];
+    }
+  }
+
+  return [];
+}
+
+interface NoteEntry {
+  content: string;
+  author: string;
+  timestamp: string;
+}
+
+function getActivityNotes(activity: TimelineActivity): NoteEntry[] {
+  if (activity.type === 'note') {
+    return [
+      {
+        content: 'Spoke with patient regarding upcoming CPAP device delivery. Patient confirmed current address and requested expedited shipping. Discussed proper device usage and maintenance schedule.',
+        author: activity.author?.name ?? 'Sarah Chen',
+        timestamp: activity.timestamp,
+      },
+      {
+        content: 'Follow-up appointment scheduled for 2 weeks post-delivery to assess compliance and comfort. Patient expressed concerns about mask fitting — referred to respiratory therapist.',
+        author: 'Emily Nguyen',
+        timestamp: new Date(new Date(activity.timestamp).getTime() - 2 * 60 * 60 * 1000).toISOString(),
+      },
+      {
+        content: 'Initial intake call completed. Patient is new to CPAP therapy. Insurance pre-verified.',
+        author: 'Mike Rivera',
+        timestamp: new Date(new Date(activity.timestamp).getTime() - 3 * 24 * 60 * 60 * 1000).toISOString(),
+      },
+    ];
+  }
+  if (activity.type === 'order_update' && (activity.description ?? '').toLowerCase().includes('notes added')) {
+    return [
+      {
+        content: 'Prior authorization approval received from Aetna. Order cleared for fulfillment. Patient has been notified via phone and email.',
+        author: activity.author?.name ?? 'System',
+        timestamp: activity.timestamp,
+      },
+      {
+        content: 'Shipping label generated — tracking number will be available within 24 hours.',
+        author: 'James Park',
+        timestamp: new Date(new Date(activity.timestamp).getTime() - 30 * 60 * 1000).toISOString(),
+      },
+    ];
+  }
+  return [];
+}
+
+interface ActivityDetailConfig {
+  description: string;
+  fields: { label: string; value: string; highlight?: boolean }[];
+}
+
+function getActivityDetailConfig(activity: TimelineActivity): ActivityDetailConfig {
+  switch (activity.type) {
+    case 'order_update':
+      return {
+        description: 'An existing order was modified.',
+        fields: [
+          { label: 'Carrier', value: 'Aetna' },
+        ],
+      };
+    case 'order_created':
+      return {
+        description: 'A new order was created and submitted for processing.',
+        fields: [
+          { label: 'Type', value: 'CPAP Device' },
+          { label: 'Carrier', value: 'Aetna' },
+        ],
+      };
+    case 'patient_update':
+      return {
+        description: activity.description ?? 'Patient information was updated.',
+        fields: [],
+      };
+    case 'patient_created':
+      return {
+        description: 'A new patient record was created in the system.',
+        fields: [
+          { label: 'Source', value: 'EHR Sync' },
+        ],
+      };
+    case 'prior_auth':
+      return {
+        description: 'A prior authorization request was submitted and processed.',
+        fields: [
+          { label: 'Auth Number', value: 'PA-2026-38291' },
+          { label: 'Carrier', value: 'Aetna' },
+          { label: 'Decision', value: 'Approved', highlight: true },
+          { label: 'Valid Through', value: '07/01/2026' },
+        ],
+      };
+    case 'eligibility_benefits':
+      return {
+        description: 'Eligibility and benefits verification was performed.',
+        fields: [
+          { label: 'Carrier', value: 'Aetna' },
+          { label: 'Plan Type', value: 'Gold PPO' },
+          { label: 'Status', value: 'Active', highlight: true },
+          { label: 'Effective', value: '01/01/2026 — 12/31/2026' },
+          { label: 'Copay', value: '$20.00' },
+          { label: 'Deductible', value: '$350.00 remaining' },
+          { label: 'Method', value: 'Electronic (270/271)' },
+        ],
+      };
+    case 'ehr_log':
+      return {
+        description: activity.description ?? 'An event was logged from the EHR system.',
+        fields: [
+          { label: 'EHR System', value: activity.description?.includes('Epic') ? 'Epic' : 'BrightTree' },
+          { label: 'Sync Type', value: 'Automatic' },
+        ],
+      };
+    case 'note':
+      return {
+        description: 'A note was added to this patient record.',
+        fields: [],
+      };
+    default:
+      return { description: '', fields: [] };
+  }
+}
+
+function ChangeLogDiff({ changes }: { changes: ChangeLogEntry[] }) {
+  return (
+    <div className="flex flex-col gap-2">
+      <span className="text-[11px] font-medium text-text-tertiary uppercase tracking-wider">Changes</span>
+      <div className="border border-border-tertiary rounded-md overflow-hidden">
+        {changes.map((change, i) => {
+          const isNew = change.before === '—';
+          return (
+            <div key={change.field} className={cn(i > 0 && 'border-t border-border-tertiary')}>
+              <div className="px-3 py-2">
+                <span className="text-xs text-text-tertiary">{change.field}</span>
+              </div>
+              {isNew ? (
+                <div className="flex items-start gap-2.5 bg-bg-success-primary px-3 py-2">
+                  <span className="text-xs font-medium lasso:wght-medium text-text-success-primary shrink-0 leading-4">+</span>
+                  <span className="text-xs text-text-primary leading-4">{change.after}</span>
+                </div>
+              ) : (
+                <>
+                  <div className="flex items-start gap-2.5 bg-bg-error-primary px-3 py-2">
+                    <span className="text-xs font-medium lasso:wght-medium text-text-error-primary shrink-0 leading-4">−</span>
+                    <span className="text-xs text-text-primary leading-4">{change.before}</span>
+                  </div>
+                  <div className="flex items-start gap-2.5 bg-bg-success-primary px-3 py-2">
+                    <span className="text-xs font-medium lasso:wght-medium text-text-success-primary shrink-0 leading-4">+</span>
+                    <span className="text-xs text-text-primary leading-4">{change.after}</span>
+                  </div>
+                </>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function NotesCard({ notes }: { notes: NoteEntry[] }) {
+  return (
+    <div className="flex flex-col gap-2">
+      <span className="text-[11px] font-medium text-text-tertiary uppercase tracking-wider">Notes</span>
+      <div className="border border-border-tertiary rounded-md overflow-hidden">
+        {notes.map((note, i) => (
+          <div key={i} className={cn(
+            'bg-bg-warning-primary px-3 py-2.5',
+            i > 0 && 'border-t border-border-warning-secondary/15'
+          )}>
+            <p className="text-xs text-text-primary leading-[18px]">{note.content}</p>
+            <p className="text-[10px] text-text-tertiary mt-1.5">
+              {note.author} · {formatFullTimestamp(note.timestamp)}
+            </p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 function formatFullTimestamp(isoString: string) {
   const date = new Date(isoString);
   return date.toLocaleDateString('en-US', {
-    month: 'long',
+    month: 'short',
     day: 'numeric',
     year: 'numeric',
   }) + ' at ' + date.toLocaleTimeString('en-US', {
@@ -941,26 +1153,17 @@ function formatFullTimestamp(isoString: string) {
   });
 }
 
-function formatOrderId(orderId: string): string {
-  return orderId.replace(/^ORD-/i, 'Order ');
-}
-
 function SidebarActivityDetail({ activity, onClose }: { activity: TimelineActivity; onClose: () => void }) {
-  const details = activityDetails[activity.type] ?? { description: '', fields: [] };
+  const config = getActivityDetailConfig(activity);
   const typeLabel = activityTypeLabel[activity.type];
-  const badgeVariant = activityTypeBadgeVariant[activity.type];
+  const changeLog = getActivityChangeLog(activity);
+  const notes = getActivityNotes(activity);
 
   return (
     <div className="flex-1 overflow-y-auto">
       {/* Header */}
-      <div className="px-4 pt-4 pb-3 flex items-start gap-2.5">
-        <div className="size-8 rounded-full border border-border-secondary flex items-center justify-center bg-bg-white shrink-0">
-          {activityIcon[activity.type]}
-        </div>
-        <div className="flex flex-col gap-0.5 min-w-0 flex-1">
-          <span className="text-sm font-medium lasso:wght-medium text-text-primary leading-tight">{activity.title}</span>
-          <Badge variant={badgeVariant} className="w-fit text-[10px]">{typeLabel}</Badge>
-        </div>
+      <div className="flex items-center justify-between px-4 pt-4 pb-2">
+        <p className="text-[20px] font-medium lasso:wght-medium leading-7 text-text-primary">{activity.title}</p>
         <Button
           variant="ghost"
           size="icon"
@@ -971,58 +1174,50 @@ function SidebarActivityDetail({ activity, onClose }: { activity: TimelineActivi
         </Button>
       </div>
 
-      <div className="border-t border-border-secondary" />
+      <div className="flex flex-col gap-5 px-4 pb-6">
+        {/* Type badge + timestamp */}
+        <div className="flex items-center gap-3">
+          <Badge variant="outline" className="text-[10px]">{typeLabel}</Badge>
+          <span className="text-xs text-text-tertiary">{formatFullTimestamp(activity.timestamp)}</span>
+        </div>
 
-      {/* Details */}
-      <div className="px-4 py-4 flex flex-col gap-4">
-        {/* Timestamp & Order */}
-        <div className="space-y-3">
-          <div className="flex flex-col gap-0.5">
-            <div className="flex items-center gap-1.5">
-              <Clock weight="regular" className="size-3 text-text-tertiary" />
-              <span className="text-[11px] text-text-tertiary uppercase tracking-wide">Date & Time</span>
+        {/* Metadata */}
+        <div className="flex flex-col gap-2">
+          <span className="text-[11px] font-medium text-text-tertiary uppercase tracking-wider">Details</span>
+          <div className="border border-border-tertiary rounded-md">
+            <div className="flex items-start gap-4 px-3 py-2">
+              <span className="text-xs text-text-tertiary w-20 shrink-0">Description</span>
+              <span className="text-xs text-text-primary">{config.description}</span>
             </div>
-            <span className="text-sm text-text-primary">{formatFullTimestamp(activity.timestamp)}</span>
+            {activity.author && (
+              <div className="flex items-center gap-4 px-3 py-2 border-t border-border-tertiary">
+                <span className="text-xs text-text-tertiary w-20 shrink-0">Performed by</span>
+                <span className="text-xs text-text-primary">{activity.author.name}</span>
+              </div>
+            )}
+            {activity.orderId && (
+              <div className="flex items-center gap-4 px-3 py-2 border-t border-border-tertiary">
+                <span className="text-xs text-text-tertiary w-20 shrink-0">Order</span>
+                <span className="text-xs text-text-primary">{activity.orderId}</span>
+              </div>
+            )}
+            {config.fields.map((field) => (
+              <div key={field.label} className="flex items-center gap-4 px-3 py-2 border-t border-border-tertiary">
+                <span className="text-xs text-text-tertiary w-20 shrink-0">{field.label}</span>
+                <span className={cn(
+                  "text-xs",
+                  field.highlight ? "text-text-success-primary" : "text-text-primary"
+                )}>{field.value}</span>
+              </div>
+            ))}
           </div>
-          {activity.orderId && (
-            <div className="flex flex-col gap-0.5">
-              <div className="flex items-center gap-1.5">
-                <Hash weight="regular" className="size-3 text-text-tertiary" />
-                <span className="text-[11px] text-text-tertiary uppercase tracking-wide">Order</span>
-              </div>
-              <span className="text-sm text-text-primary font-mono">{formatOrderId(activity.orderId)}</span>
-            </div>
-          )}
         </div>
 
-        <div className="border-t border-border-secondary" />
+        {/* Change log */}
+        {changeLog.length > 0 && <ChangeLogDiff changes={changeLog} />}
 
-        {/* Description */}
-        <div>
-          <span className="text-[11px] text-text-tertiary uppercase tracking-wide">Description</span>
-          <p className="text-sm text-text-secondary mt-1 leading-relaxed">{details.description}</p>
-        </div>
-
-        {/* Detail fields */}
-        {details.fields.length > 0 && (
-          <>
-            <div className="border-t border-border-secondary" />
-            <div>
-              <span className="text-[11px] text-text-tertiary uppercase tracking-wide">Details</span>
-              <div className="mt-2 bg-bg-secondary rounded-md border border-border-secondary">
-                {details.fields.map((field, i) => (
-                  <div key={field.label} className={cn(
-                    "flex items-center justify-between px-3 py-2",
-                    i > 0 && "border-t border-border-secondary"
-                  )}>
-                    <span className="text-sm text-text-secondary">{field.label}</span>
-                    <span className="text-sm font-medium lasso:wght-medium text-text-primary">{field.value}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </>
-        )}
+        {/* Notes */}
+        {notes.length > 0 && <NotesCard notes={notes} />}
       </div>
     </div>
   );
@@ -1442,7 +1637,7 @@ export function PatientSummaryVariantB({
   onAddComment,
   hideOrderIllustrations,
 }: PatientSummaryVariantBProps) {
-  const [activeMainTab, setActiveMainTab] = useState('summary');
+  const [activeMainTab, setActiveMainTab] = useState('activity');
   const [isRightSidebarOpen, setIsRightSidebarOpen] = useState(false);
   const [sidebarPercent, setSidebarPercent] = useState(DEFAULT_SIDEBAR_PERCENT);
   const [isResizing, setIsResizing] = useState(false);
@@ -1535,6 +1730,11 @@ export function PatientSummaryVariantB({
     setSidebarDetailView({ kind: 'patient' });
   }, []);
 
+  const handleTabChange = useCallback((tab: string) => {
+    setActiveMainTab(tab);
+    setIsRightSidebarOpen(false);
+  }, []);
+
   const handleViewAllOrders = useCallback(() => {
     setActiveMainTab('orders');
   }, []);
@@ -1558,7 +1758,7 @@ export function PatientSummaryVariantB({
     <div ref={containerRef} className="flex flex-1 gap-0 h-full">
       {/* Main Content Area Panel */}
       <main className="flex-1 flex flex-col h-full overflow-hidden bg-bg-primary rounded-xs shadow-[0_0_6px_1px_rgba(0,0,0,0.03),0_4px_6px_-1px_rgba(0,0,0,0.10),0_2px_4px_-2px_rgba(0,0,0,0.10)]">
-        <Tabs value={activeMainTab} onValueChange={setActiveMainTab} className="flex-1 flex flex-col h-full overflow-hidden">
+        <Tabs value={activeMainTab} onValueChange={handleTabChange} className="flex-1 flex flex-col h-full overflow-hidden">
           {/* Fixed Header Section */}
           <div className="pt-6 px-6 flex flex-col items-start w-full bg-bg-primary shrink-0">
             <div className="flex items-center justify-between w-full">
@@ -1594,18 +1794,6 @@ export function PatientSummaryVariantB({
             {/* Main Tabs Navigation */}
             <nav className="w-full h-10 mt-4 relative border-b border-border">
               <TabsList className="inline-flex h-full items-center justify-start bg-transparent p-0 gap-0">
-                <TabsTrigger
-                  value="summary"
-                  className={cn(
-                    'relative px-2 h-full inline-flex items-center justify-center text-sm transition-colors rounded-none border-0 shadow-none',
-                    'bg-transparent hover:bg-transparent data-[state=active]:bg-transparent data-[state=active]:shadow-none',
-                    'after:absolute after:bottom-[-1px] after:left-0 after:right-0 after:h-[2px]',
-                    'data-[state=active]:text-foreground data-[state=active]:font-medium data-[state=active]:after:bg-brand-terracotta',
-                    'data-[state=inactive]:text-muted-foreground data-[state=inactive]:font-normal hover:text-foreground'
-                  )}
-                >
-                  Summary
-                </TabsTrigger>
                 <TabsTrigger
                   value="activity"
                   className={cn(
@@ -1678,52 +1866,15 @@ export function PatientSummaryVariantB({
                 >
                   Documents
                 </TabsTrigger>
-                <TabsTrigger
-                  value="runs"
-                  className={cn(
-                    'relative px-2 h-full inline-flex items-center justify-center text-sm transition-colors rounded-none border-0 shadow-none',
-                    'bg-transparent hover:bg-transparent data-[state=active]:bg-transparent data-[state=active]:shadow-none',
-                    'after:absolute after:bottom-[-1px] after:left-0 after:right-0 after:h-[2px]',
-                    'data-[state=active]:text-foreground data-[state=active]:font-medium data-[state=active]:after:bg-brand-terracotta',
-                    'data-[state=inactive]:text-muted-foreground data-[state=inactive]:font-normal hover:text-foreground'
-                  )}
-                >
-                  Runs
-                </TabsTrigger>
-                <TabsTrigger
-                  value="audit-log"
-                  className={cn(
-                    'relative px-2 h-full inline-flex items-center justify-center text-sm transition-colors rounded-none border-0 shadow-none',
-                    'bg-transparent hover:bg-transparent data-[state=active]:bg-transparent data-[state=active]:shadow-none',
-                    'after:absolute after:bottom-[-1px] after:left-0 after:right-0 after:h-[2px]',
-                    'data-[state=active]:text-foreground data-[state=active]:font-medium data-[state=active]:after:bg-brand-terracotta',
-                    'data-[state=inactive]:text-muted-foreground data-[state=inactive]:font-normal hover:text-foreground'
-                  )}
-                >
-                  Audit Log
-                </TabsTrigger>
               </TabsList>
             </nav>
           </div>
 
           {/* Scrollable Tab Content */}
           <div className="flex-1 overflow-y-auto px-6 pt-4 pb-6">
-            {/* Summary Tab */}
-            <TabsContent value="summary" className="mt-0 flex flex-col gap-4">
-              <div className="grid grid-cols-3 gap-4 items-stretch">
-                <div className="col-span-2 flex flex-col gap-4">
-                  <LastActivityCard activities={activities} />
-                  <ActiveOrdersCard patientId={patient.id} orders={orders} onSelectOrder={handleSelectOrder} onViewAll={handleViewAllOrders} hideIllustrations={hideOrderIllustrations} />
-                </div>
-                <div className="flex flex-col gap-4">
-                  <PayerContactCard insurance={patient.primaryInsurance} />
-                </div>
-              </div>
-            </TabsContent>
-
             {/* Activity Tab */}
             <TabsContent value="activity" className="mt-0">
-              <Timeline activities={activities} onAddComment={onAddComment} />
+              <Timeline activities={activities} onAddComment={onAddComment} onSelectActivity={handleSelectActivity} />
             </TabsContent>
 
             {/* Demographics Tab */}
@@ -1768,15 +1919,6 @@ export function PatientSummaryVariantB({
               <DocumentsTableCard documents={documents} onViewDocument={handleViewDocument} />
             </TabsContent>
 
-            {/* Runs Tab */}
-            <TabsContent value="runs" className="mt-0">
-              <RunsSection patient={patient} />
-            </TabsContent>
-
-            {/* Audit Log Tab */}
-            <TabsContent value="audit-log" className="mt-0">
-              <Timeline activities={auditLogEntries} filterBy="ehrSystem" />
-            </TabsContent>
           </div>
         </Tabs>
       </main>

@@ -259,7 +259,7 @@ export function Timeline({ activities, onSelectActivity, className, filterBy = '
                     )}
                   </div>
                   <span className="text-[11px] text-text-tertiary whitespace-nowrap shrink-0">
-                    {formatActivityDate(activity.timestamp)}
+                    {formatActivityDate(activity.timestamp)} · {formatActivityTime(activity.timestamp)}
                   </span>
                 </div>
                 {activity.description && (

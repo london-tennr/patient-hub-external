@@ -80,7 +80,6 @@ export function DemographicsForm({ patient }: DemographicsFormProps) {
         <div className="p-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Field label="Primary Phone" value={patient.phone} />
-            <Field label="Secondary Phone" />
             <div className="md:col-span-2">
               <Field label="Email" value={patient.email} />
             </div>
@@ -98,19 +97,6 @@ export function DemographicsForm({ patient }: DemographicsFormProps) {
         </div>
       </div>
 
-      {/* Emergency Contact */}
-      <div className={cardClass}>
-        <div className={headerClass}>
-          <div className={titleClass}>Emergency Contact</div>
-        </div>
-        <div className="p-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Field label="Name" value={patient.emergencyContact?.name ?? 'Robert Williams'} />
-            <Field label="Contact" value={patient.emergencyContact?.phone ?? '(425) 555-0187'} />
-            <Field label="Relationship" value={patient.emergencyContact?.relationship ?? 'Father'} />
-          </div>
-        </div>
-      </div>
     </div>
   );
 }

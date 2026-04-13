@@ -65,7 +65,7 @@ const mockPatient: Patient = {
 const mockOrders: Order[] = [
   {
     id: 'ORD001',
-    externalOrderId: 'ClH6A0xTUYS-bgJa',
+    externalOrderId: 'Order-1000001',
     patientId: '1',
     patientName: 'John Smith',
     patientDob: '1985-03-15',
@@ -86,7 +86,7 @@ const mockOrders: Order[] = [
   },
   {
     id: 'ORD002',
-    externalOrderId: 'Xk9B2mWqR7Lp-dNfE',
+    externalOrderId: 'Order-1000002',
     patientId: '1',
     patientName: 'John Smith',
     patientDob: '1985-03-15',
@@ -107,7 +107,7 @@ const mockOrders: Order[] = [
   },
   {
     id: 'ORD003',
-    externalOrderId: 'Rm4K7vNcQ2Hs-jYtW',
+    externalOrderId: 'Order-1000003',
     patientId: '1',
     patientName: 'John Smith',
     patientDob: '1985-03-15',
@@ -119,20 +119,20 @@ const mockOrders: Order[] = [
     items: [{ id: 'LI003', description: 'CGM supply allowance', hcpcsCode: 'A4239', product: 'Freestyle Libre 3 sensors', quantity: 2 }],
     stage: 'validation',
     subStatus: 'awaiting_response',
-    missingInfo: ['Physician signature on CMN form', 'Updated insurance card (front and back)'],
+    missingInfo: ['Physician signature on CMN form', 'Updated payer card (front and back)'],
     referringPractitioner: null,
     referringFacility: null,
     dateCreated: '2026-04-02',
     lastUpdated: '2026-04-02',
     documents: [],
     notes: [
-      { id: 'N-003a', content: 'Insurance verification submitted to carrier.', author: 'Tennr System', createdAt: '2026-04-02T09:15:00Z' },
+      { id: 'N-003a', content: 'Payer verification submitted to carrier.', author: 'Tennr System', createdAt: '2026-04-02T09:15:00Z' },
       { id: 'N-003b', content: 'Patient confirmed current address and delivery preferences.', author: 'Jane Miller', createdAt: '2026-04-02T11:30:00Z' },
     ],
   },
   {
     id: 'ORD-BUG',
-    externalOrderId: 'Qf6T1rAvD4Wk-yLmN',
+    externalOrderId: 'Order-1000004',
     patientId: '1',
     patientName: 'John Smith',
     patientDob: '1985-03-15',
@@ -157,7 +157,7 @@ const mockOrders: Order[] = [
   },
   {
     id: 'ORD-ACT',
-    externalOrderId: 'Hs9W2pBxE7Jn-cRgK',
+    externalOrderId: 'Order-1000005',
     patientId: '1',
     patientName: 'John Smith',
     patientDob: '1985-03-15',
@@ -180,7 +180,7 @@ const mockOrders: Order[] = [
   },
   {
     id: 'ORD004',
-    externalOrderId: 'Jv7G3bCxZ1Np-qEwF',
+    externalOrderId: 'Order-1000006',
     patientId: '1',
     patientName: 'John Smith',
     patientDob: '1985-03-15',
@@ -201,7 +201,7 @@ const mockOrders: Order[] = [
   },
   {
     id: 'ORD005',
-    externalOrderId: 'Tn5F8kPwV3Qr-mXaB',
+    externalOrderId: 'Order-1000007',
     patientId: '1',
     patientName: 'John Smith',
     patientDob: '1985-03-15',
@@ -222,7 +222,7 @@ const mockOrders: Order[] = [
   },
   {
     id: 'ORD006',
-    externalOrderId: 'Wq2L9nRtY6Km-pHsD',
+    externalOrderId: 'Order-1000008',
     patientId: '1',
     patientName: 'John Smith',
     patientDob: '1985-03-15',
@@ -243,7 +243,7 @@ const mockOrders: Order[] = [
   },
   {
     id: 'ORD007',
-    externalOrderId: 'Pk1N5eGwB9Ms-tVrJ',
+    externalOrderId: 'Order-1000009',
     patientId: '1',
     patientName: 'John Smith',
     patientDob: '1985-03-15',
@@ -264,7 +264,7 @@ const mockOrders: Order[] = [
   },
   {
     id: 'ORD008',
-    externalOrderId: 'Zm8Q4hIxC2Ot-uWnL',
+    externalOrderId: 'Order-1000010',
     patientId: '1',
     patientName: 'John Smith',
     patientDob: '1985-03-15',
@@ -285,7 +285,7 @@ const mockOrders: Order[] = [
   },
   {
     id: 'ORD009',
-    externalOrderId: 'Hy4M6dFvA8Lr-sUtK',
+    externalOrderId: 'Order-1000011',
     patientId: '1',
     patientName: 'John Smith',
     patientDob: '1985-03-15',
@@ -306,7 +306,7 @@ const mockOrders: Order[] = [
   },
   {
     id: 'ORD010',
-    externalOrderId: 'Bq3R7wLtN5Gk-zPcJ',
+    externalOrderId: 'Order-1000012',
     patientId: '1',
     patientName: 'John Smith',
     patientDob: '1985-03-15',
@@ -327,7 +327,7 @@ const mockOrders: Order[] = [
   },
   {
     id: 'ORD011',
-    externalOrderId: 'Gf8P1mDxK4Ws-hNrQ',
+    externalOrderId: 'Order-1000013',
     patientId: '1',
     patientName: 'John Smith',
     patientDob: '1985-03-15',
@@ -348,7 +348,7 @@ const mockOrders: Order[] = [
   },
   {
     id: 'ORD012',
-    externalOrderId: 'Ux6T9sFvR2Ml-bWcA',
+    externalOrderId: 'Order-1000014',
     patientId: '1',
     patientName: 'John Smith',
     patientDob: '1985-03-15',
@@ -369,7 +369,7 @@ const mockOrders: Order[] = [
   },
   {
     id: 'ORD013',
-    externalOrderId: 'Nk4W2pHtE7Bj-yQgR',
+    externalOrderId: 'Order-1000015',
     patientId: '1',
     patientName: 'John Smith',
     patientDob: '1985-03-15',
@@ -390,7 +390,7 @@ const mockOrders: Order[] = [
   },
   {
     id: 'ORD014',
-    externalOrderId: 'Cx9J5rKwT3Fn-dAmH',
+    externalOrderId: 'Order-1000016',
     patientId: '1',
     patientName: 'John Smith',
     patientDob: '1985-03-15',
@@ -411,7 +411,7 @@ const mockOrders: Order[] = [
   },
   {
     id: 'ORD015',
-    externalOrderId: 'Vt7B8nGwQ1Rp-kLsE',
+    externalOrderId: 'Order-1000017',
     patientId: '1',
     patientName: 'John Smith',
     patientDob: '1985-03-15',
@@ -432,7 +432,7 @@ const mockOrders: Order[] = [
   },
   {
     id: 'ORD016',
-    externalOrderId: 'Lw2D4xAzF6Hp-mYtN',
+    externalOrderId: 'Order-1000018',
     patientId: '1',
     patientName: 'John Smith',
     patientDob: '1985-03-15',
@@ -453,7 +453,7 @@ const mockOrders: Order[] = [
   },
   {
     id: 'ORD017',
-    externalOrderId: 'Qr5G1kMtV8Wn-jXfP',
+    externalOrderId: 'Order-1000019',
     patientId: '1',
     patientName: 'John Smith',
     patientDob: '1985-03-15',
@@ -474,7 +474,7 @@ const mockOrders: Order[] = [
   },
   {
     id: 'ORD018',
-    externalOrderId: 'Ap8F3sNwK9Ct-rBqW',
+    externalOrderId: 'Order-1000020',
     patientId: '1',
     patientName: 'John Smith',
     patientDob: '1985-03-15',
@@ -495,7 +495,7 @@ const mockOrders: Order[] = [
   },
   {
     id: 'ORD019',
-    externalOrderId: 'Yz1L6pRtB4Mk-wHnD',
+    externalOrderId: 'Order-1000021',
     patientId: '1',
     patientName: 'John Smith',
     patientDob: '1985-03-15',
@@ -516,7 +516,7 @@ const mockOrders: Order[] = [
   },
   {
     id: 'ORD020',
-    externalOrderId: 'Ej7K2vNwG5Sq-tFxR',
+    externalOrderId: 'Order-1000022',
     patientId: '1',
     patientName: 'John Smith',
     patientDob: '1985-03-15',
@@ -574,9 +574,9 @@ const activityTemplates: {
   orderIds?: string[];
 }[] = [
   { type: 'order_created', title: 'Order created', descriptions: ['Respiratory / Oxygen', 'CPAP / BiPAP', 'Enteral Nutrition', 'Wound Care Supplies', 'Infusion Therapy', 'Mobility / Wheelchair', 'Hospital Bed / Equipment'], orderIds: ['Order-4821', 'Order-3190', 'Order-2847', 'Order-5512', 'Order-6103'] },
-  { type: 'order_update', title: 'Order updated', descriptions: ['Insurance verified', 'Prior auth submitted', 'Status changed to In Progress', 'Documents uploaded', 'Shipping address updated', 'Notes added', 'Claim submitted', 'Authorization approved'], orderIds: ['Order-4821', 'Order-3190', 'Order-2847', 'Order-5512', 'Order-6103'] },
+  { type: 'order_update', title: 'Order updated', descriptions: ['Payer verified', 'Prior auth submitted', 'Status changed to In Progress', 'Documents uploaded', 'Shipping address updated', 'Claim submitted', 'Authorization approved'], orderIds: ['Order-4821', 'Order-3190', 'Order-2847', 'Order-5512', 'Order-6103'] },
   { type: 'patient_created', title: 'Patient created', descriptions: [] },
-  { type: 'patient_update', title: 'Patient updated', descriptions: ['Demographics updated', 'Insurance info updated', 'Phone number changed', 'Address updated', 'Primary care provider updated', 'Emergency contact added'] },
+  { type: 'patient_update', title: 'Patient updated', descriptions: ['Demographics updated', 'Payer info updated', 'Phone number changed', 'Address updated', 'Primary care provider updated', 'Emergency contact added'] },
 ];
 
 const timelineUserNames: { name: string; initials: string }[] = [
@@ -591,6 +591,15 @@ const timelineUserNames: { name: string; initials: string }[] = [
   { name: 'Amanda Wright', initials: 'AW' },
   { name: 'Kevin O\'Brien', initials: 'KO' },
 ];
+
+// Map order IDs to their order type/item name
+const orderIdToName: Record<string, string> = {
+  'Order-4821': 'Nebulizer',
+  'Order-3190': 'CGM & Supplies',
+  'Order-2847': 'CPAP Machine',
+  'Order-5512': 'Aerosol Mask',
+  'Order-6103': 'Wheelchair',
+};
 
 function generateTimelineActivities(count: number): TimelineActivity[] {
   const activities: TimelineActivity[] = [];
@@ -615,19 +624,30 @@ function generateTimelineActivities(count: number): TimelineActivity[] {
       source = 'system';
     }
 
-    let description: string | undefined;
     const orderId = template.orderIds?.[seed % template.orderIds.length];
-    if (template.descriptions.length > 0) {
-      const desc = template.descriptions[seed % template.descriptions.length];
-      description = orderId ? `${orderId} · ${desc}` : desc;
-    } else if (orderId) {
-      description = orderId;
+    const isOrderType = template.type === 'order_created' || template.type === 'order_update';
+    const orderName = orderId ? orderIdToName[orderId] : undefined;
+
+    // Build description: include order type + detail for order-related activities
+    let description: string | undefined;
+    if (isOrderType && orderName) {
+      const detail = template.descriptions.length > 0
+        ? template.descriptions[seed % template.descriptions.length]
+        : undefined;
+      description = detail ? `${orderName} · ${detail}` : orderName;
+    } else if (template.descriptions.length > 0) {
+      description = template.descriptions[seed % template.descriptions.length];
     }
+
+    // For order types, include the order ID in the title (e.g. "Order-5512 updated")
+    const title = isOrderType && orderId
+      ? `${orderId} ${template.type === 'order_created' ? 'created' : 'updated'}`
+      : template.title;
 
     activities.push({
       id: String(i + 1),
       type: template.type,
-      title: template.title,
+      title,
       description,
       orderId: orderId?.replace('Order-', 'ORD-'),
       source,

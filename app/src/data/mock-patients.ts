@@ -117,12 +117,8 @@ const referringProviders = [
 const payers = ['Aetna', 'Blue Cross Blue Shield', 'UnitedHealthcare', 'Cigna', 'Humana', 'Medicare', 'Medicaid'];
 
 function generateExternalOrderId(): string {
-  const chars = '0123456789abcdef';
-  let id = 'SO';
-  for (let i = 0; i < 32; i++) {
-    id += chars[Math.floor(rand() * chars.length)];
-  }
-  return id;
+  const num = 3000000 + Math.floor(rand() * 9000000);
+  return `Order-${num}`;
 }
 
 // Deterministic seeded random for reproducibility
@@ -329,7 +325,7 @@ const activityTypes = ['Order created', 'Order updated', 'Patient created', 'Pat
 
 const updateOrderMetadata = [
   'Status changed to In Progress',
-  'Insurance verified',
+  'Payer verified',
   'Documents uploaded',
   'Prior auth submitted',
   'Shipping address updated',
@@ -338,7 +334,7 @@ const updateOrderMetadata = [
 
 const updatePatientMetadata = [
   'Demographics updated',
-  'Insurance info updated',
+  'Payer info updated',
   'Phone number changed',
   'Address updated',
   'Primary care provider updated',
@@ -378,11 +374,14 @@ function generateActivityEntry(referralDate: string, dayOffset: number): { title
   const orderType = orderCategories[Math.floor(rand() * orderCategories.length)];
   const { source, sourceLabel } = generateActivitySource();
 
+  let title: string = type;
   let metadata: string | undefined;
   if (type === 'Order created') {
-    metadata = `${orderId} · ${orderType}`;
+    title = `${orderId} created`;
+    metadata = orderType;
   } else if (type === 'Order updated') {
-    metadata = `${orderId} · ${updateOrderMetadata[Math.floor(rand() * updateOrderMetadata.length)]}`;
+    title = `${orderId} updated`;
+    metadata = updateOrderMetadata[Math.floor(rand() * updateOrderMetadata.length)];
   } else if (type === 'Patient updated') {
     metadata = updatePatientMetadata[Math.floor(rand() * updatePatientMetadata.length)];
   }
@@ -391,7 +390,7 @@ function generateActivityEntry(referralDate: string, dayOffset: number): { title
   ts.setDate(ts.getDate() + dayOffset);
   ts.setHours(8 + Math.floor(rand() * 10), Math.floor(rand() * 60));
 
-  return { title: type, timestamp: ts.toISOString(), metadata, source, sourceLabel };
+  return { title, timestamp: ts.toISOString(), metadata, source, sourceLabel };
 }
 
 function generateLastActivity(status: PatientStatus, referralDate: string): { title: string; timestamp: string; metadata?: string; source: ActivitySource; sourceLabel: string } {
@@ -510,7 +509,7 @@ function generatePatients(count: number): Patient[] {
       patients[i].runningStages = undefined;
       patients[i].actionCount = 1;
       patients[i].actionItems = [
-        { id: 'action-1', label: 'Verify insurance details', description: 'Member ID appears invalid for Aetna' },
+        { id: 'action-1', label: 'Verify payer details', description: 'Member ID appears invalid for Aetna' },
       ];
       patients[i].lastActivity = generateLastActivity('missing_info', patients[i].referralDate);
       rebuildStageCompletedAt(patients[i]);

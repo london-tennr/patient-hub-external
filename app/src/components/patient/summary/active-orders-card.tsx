@@ -71,7 +71,7 @@ export function OrderCard({ order, onSelect }: { order: Order; onSelect: (order:
 const orderStages: { key: OrderStage | 'referral' | 'order_created'; label: string }[] = [
   { key: 'referral', label: 'Referral Received' },
   { key: 'order_created', label: 'Order Created' },
-  { key: 'validation', label: 'Insurance Verified' },
+  { key: 'validation', label: 'Payer Verified' },
   { key: 'eligibility', label: 'Eligibility & Benefits' },
   { key: 'qualification', label: 'Order Qualification' },
   { key: 'complete', label: 'Completed' },

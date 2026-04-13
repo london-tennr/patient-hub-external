@@ -54,7 +54,7 @@ const tennrStatusConfig: Record<Patient['tennrStatus'], { label: string; dotColo
 const stageConfig: Record<PatientStage, { label: string; step: number }> = {
   referral_received: { label: 'Referral Received', step: 1 },
   intake_review: { label: 'Intake Review', step: 2 },
-  insurance_verification: { label: 'Insurance Verification', step: 3 },
+  insurance_verification: { label: 'Payer Verification', step: 3 },
   prior_authorization: { label: 'Prior Authorization', step: 4 },
   scheduling: { label: 'Scheduling', step: 5 },
   ready_for_claim: { label: 'Ready for Claim', step: 6 },
@@ -83,7 +83,7 @@ function RecentActivityCell({ patient }: { patient: Patient }) {
   const cellContent = (
     <div className="flex flex-col gap-0.5">
       <span className="text-sm text-text-primary truncate max-w-[220px]">{activity.title}</span>
-      <span className="text-xs text-text-tertiary">{formatActivityDate(activity.timestamp)}</span>
+      <span className="text-xs text-text-tertiary">{formatActivityDate(activity.timestamp)} {formatActivityTime(activity.timestamp)}</span>
     </div>
   );
 
@@ -104,7 +104,7 @@ function RecentActivityCell({ patient }: { patient: Patient }) {
       <PopoverContent
         side="bottom"
         align="start"
-        className="w-[280px] p-0 shadow-lg border border-border-secondary rounded-lg"
+        className="w-[340px] p-0 shadow-lg border border-border-secondary rounded-lg"
         onMouseEnter={() => setOpen(true)}
         onMouseLeave={() => setOpen(false)}
       >
@@ -129,7 +129,7 @@ function RecentActivityCell({ patient }: { patient: Patient }) {
                     )}
                   </div>
                   <span className="text-[11px] text-text-tertiary whitespace-nowrap shrink-0">
-                    {formatActivityDate(a.timestamp)}
+                    {formatActivityDate(a.timestamp)} {formatActivityTime(a.timestamp)}
                   </span>
                 </div>
                 {a.metadata && (
@@ -551,21 +551,11 @@ function createColumns(onFilterBy?: OnFilterBy, onStageClick?: OnStageClick, pro
     }),
     columnHelper.accessor('status', {
       id: 'status',
-      header: 'Patient Status',
+      header: 'Status',
+      enableSorting: false,
       cell: (info) => {
         const patient = info.row.original;
         return <PatientStatusBadge status={patient.status} stage={patient.stage} actionCount={patient.actionCount} actionItems={patient.actionItems} onOpenWorkflow={() => onOpenWorkflow?.(patient)} onSelectAction={(actionId) => onOpenWorkflow?.(patient, actionId)} />;
-      },
-      sortingFn: (rowA, rowB) => {
-        const priority: Record<PatientStatus, number> = {
-          needs_attention: 0,
-          missing_info: 0,
-          on_track: 1,
-          blocked: 2,
-          completed: 3,
-          inactive: 4,
-        };
-        return priority[rowA.original.status] - priority[rowB.original.status];
       },
     }),
     columnHelper.accessor((row) => row.lastActivity, {
@@ -747,7 +737,7 @@ export function PatientsTableWithControls({
 export function usePatientsTable(patients: Patient[], onFilterBy?: OnFilterBy, onStageClick?: OnStageClick, progressStyle: ProgressStyle = 'stepper', onPreviewPatient?: OnPreviewPatient, onOpenWorkflow?: (patient: Patient, actionId?: string) => void) {
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
   const [columnOrder, setColumnOrder] = useState<ColumnOrderState>([]);
-  const [sorting, setSorting] = useState<SortingState>([{ id: 'status', desc: false }]);
+  const [sorting, setSorting] = useState<SortingState>([]);
   const [pagination, setPagination] = useState<PaginationState>({
     pageIndex: 0,
     pageSize: 10,
@@ -844,7 +834,8 @@ export function PatientsTableContent({ table, onPatientClick }: PatientsTableCon
 
   return (
     <>
-      <Table className="table-fixed w-full">
+      <div className="overflow-x-auto" suppressHydrationWarning>
+      <Table className="table-fixed w-full min-w-[700px]">
         <TableHeader>
           {table.getHeaderGroups().map((headerGroup) => (
             <TableRow
@@ -911,10 +902,11 @@ export function PatientsTableContent({ table, onPatientClick }: PatientsTableCon
           ))}
         </TableBody>
       </Table>
+      </div>
 
       {pageCount > 1 && (
-        <div className="flex items-center justify-between px-4 py-3 border-t border-border">
-          <p className="text-sm text-text-secondary">
+        <div className="flex items-center justify-between px-3 py-2 md:px-4 md:py-3 border-t border-border">
+          <p className="hidden sm:block text-sm text-text-secondary">
             Showing {currentPage * 10 + 1}-{Math.min((currentPage + 1) * 10, table.getRowCount())} of{' '}
             {table.getRowCount()} results
           </p>
@@ -928,6 +920,7 @@ export function PatientsTableContent({ table, onPatientClick }: PatientsTableCon
               Previous
             </button>
 
+            <div className="hidden sm:flex items-center gap-1">
             {getVisiblePages(currentPage, pageCount).map((page, i) =>
               page === 'ellipsis' ? (
                 <span key={`ellipsis-${i}`} className="flex items-center justify-center size-8 text-sm text-text-secondary">
@@ -948,6 +941,7 @@ export function PatientsTableContent({ table, onPatientClick }: PatientsTableCon
                 </button>
               )
             )}
+            </div>
 
             <button
               onClick={() => table.nextPage()}

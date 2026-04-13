@@ -92,7 +92,7 @@ const patientFilterCategories: FilterCategoryType[] = [
     values: [
       { id: 'referral_received', label: 'Referral Received' },
       { id: 'intake_review', label: 'Intake Review' },
-      { id: 'insurance_verification', label: 'Insurance Verification' },
+      { id: 'insurance_verification', label: 'Payer Verification' },
       { id: 'prior_authorization', label: 'Prior Authorization' },
       { id: 'scheduling', label: 'Scheduling' },
       { id: 'ready_for_claim', label: 'Ready for Claim' },

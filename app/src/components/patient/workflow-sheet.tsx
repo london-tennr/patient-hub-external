@@ -455,7 +455,7 @@ interface WorkflowSheetProps {
 }
 
 const actionTitles: Record<string, string> = {
-  'action-1': 'Verify Insurance Details',
+  'action-1': 'Verify Payer Details',
   'action-2': 'Multi-Patient Split',
   'action-3': 'Validate Document Information',
 };
@@ -486,14 +486,14 @@ export function WorkflowSheet({ patient, open, onOpenChange, actionId }: Workflo
   };
 
   const bottomButtonLabel: Record<string, string> = {
-    'action-1': 'Confirm insurance details',
+    'action-1': 'Confirm payer details',
     'action-2': 'Confirm patient split',
     'action-3': 'Approve all documents',
   };
 
   return (
     <div className="fixed inset-0 z-[100] flex flex-col bg-bg-primary">
-      <div className="flex flex-1 min-h-0">
+      <div className="flex flex-col md:flex-row flex-1 min-h-0">
         {/* LEFT PANEL */}
         <div className="flex-1 flex flex-col min-w-0 bg-bg-primary">
           {/* Top bar with breadcrumb */}
@@ -508,7 +508,7 @@ export function WorkflowSheet({ patient, open, onOpenChange, actionId }: Workflo
               <span className="text-text-tertiary">/</span>
               <span className="text-text-primary font-medium">{title}</span>
             </nav>
-            <div className="flex items-center gap-1">
+            <div className="hidden md:flex items-center gap-1">
               <span className="text-[11px] text-text-tertiary mr-2">10 days open</span>
               <button className="size-7 flex items-center justify-center rounded-md hover:bg-bg-secondary transition-colors cursor-pointer">
                 <ArrowSquareOut weight="regular" className="size-3.5 text-text-tertiary" />
@@ -546,7 +546,7 @@ export function WorkflowSheet({ patient, open, onOpenChange, actionId }: Workflo
           </div>
 
           {/* Scrollable content */}
-          <div className="flex-1 overflow-y-auto px-5 py-5">
+          <div className="flex-1 overflow-y-auto px-4 py-4 md:px-5 md:py-5">
             {activeTab === 'primary' ? (
               <>
                 {resolvedAction === 'action-1' && <VerifyInsuranceContent patient={patient} />}
@@ -562,9 +562,9 @@ export function WorkflowSheet({ patient, open, onOpenChange, actionId }: Workflo
         </div>
 
         {/* RIGHT PANEL — Patient Info sidebar */}
-        <div className="w-[360px] shrink-0 border-l border-border-tertiary bg-bg-white flex flex-col">
+        <div className="w-full md:w-[360px] shrink-0 border-t md:border-t-0 md:border-l border-border-tertiary bg-bg-white flex flex-col max-h-[40vh] md:max-h-none">
           {/* Panel header */}
-          <div className="flex items-center justify-between px-5 h-11 border-b border-border-tertiary shrink-0">
+          <div className="flex items-center justify-between px-4 md:px-5 h-11 border-b border-border-tertiary shrink-0">
             <span className="text-sm font-medium lasso:wght-medium text-text-primary">{fullName} · CPAP</span>
             <button
               onClick={() => onOpenChange(false)}
@@ -578,11 +578,11 @@ export function WorkflowSheet({ patient, open, onOpenChange, actionId }: Workflo
           <div className="flex-1 overflow-y-auto">
             {/* Provided Patient Info */}
             <div className="border-b border-border-tertiary">
-              <div className="px-5 pt-4 pb-2">
+              <div className="px-4 md:px-5 pt-4 pb-2">
                 <span className="text-[11px] font-medium text-text-tertiary uppercase tracking-wider">Patient Info</span>
               </div>
 
-              <div className="px-5 pb-4 space-y-3">
+              <div className="px-4 md:px-5 pb-4 space-y-3">
                 <div className="grid grid-cols-2 gap-3">
                   <div className="flex flex-col gap-1">
                     <label className="text-[11px] text-text-tertiary">First Name</label>
@@ -631,7 +631,7 @@ export function WorkflowSheet({ patient, open, onOpenChange, actionId }: Workflo
             </div>
 
             {/* Payer card */}
-            <div className="px-5 py-4 space-y-3 border-b border-border-tertiary">
+            <div className="px-4 md:px-5 py-4 space-y-3 border-b border-border-tertiary">
               <div className="border border-border-tertiary rounded-md overflow-hidden">
                 <div className="flex items-center justify-between px-4 py-2.5 border-b border-border-tertiary">
                   <div className="flex flex-col">
@@ -691,7 +691,7 @@ export function WorkflowSheet({ patient, open, onOpenChange, actionId }: Workflo
           </div>
 
           {/* Bottom bar */}
-          <div className="flex items-center gap-2.5 px-5 py-3 border-t border-border-tertiary bg-bg-white shrink-0">
+          <div className="flex items-center gap-2.5 px-4 py-2 md:px-5 md:py-3 border-t border-border-tertiary bg-bg-white shrink-0">
             <div className="flex items-center gap-1.5 h-8 px-3 border border-border-secondary rounded-md text-xs text-text-tertiary cursor-pointer hover:bg-bg-secondary/30 transition-colors">
               <span>Select decision</span>
               <CaretDown weight="regular" className="size-3" />

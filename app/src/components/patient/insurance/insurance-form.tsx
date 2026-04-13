@@ -23,7 +23,7 @@ export function InsuranceForm({ insurance, title }: InsuranceFormProps) {
           <div className="text-base font-medium lasso:wght-medium leading-6 text-foreground">{title}</div>
         </div>
         <div className="p-4">
-          <p className="text-sm text-text-secondary">No insurance on file</p>
+          <p className="text-sm text-text-secondary">No payer on file</p>
         </div>
       </div>
     );

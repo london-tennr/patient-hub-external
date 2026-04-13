@@ -17,7 +17,7 @@ const statusBadgeConfig: Record<OrderStatus, { label: string; variant: 'success'
 
 const stages: { id: OrderStage; label: string }[] = [
   { id: 'validation', label: 'Patient Intake' },
-  { id: 'eligibility', label: 'Insurance Verified' },
+  { id: 'eligibility', label: 'Payer Verified' },
   { id: 'qualification', label: 'Resupply Confirmed' },
   { id: 'complete', label: 'Ready for Shipment' },
 ];

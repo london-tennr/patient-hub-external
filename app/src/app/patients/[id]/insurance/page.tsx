@@ -47,11 +47,11 @@ export default function InsurancePage({
     <div className="space-y-6">
       <InsuranceForm
         insurance={mockPrimaryInsurance}
-        title="Primary Insurance"
+        title="Primary Payer"
       />
       <InsuranceForm
         insurance={undefined}
-        title="Secondary Insurance"
+        title="Secondary Payer"
       />
       <VerificationHistory history={mockVerificationHistory} />
     </div>

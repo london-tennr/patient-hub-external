@@ -9,7 +9,7 @@ import type { PatientStatus, PatientStage } from '@/types/patient';
 const stageLabels: Record<PatientStage, string> = {
   referral_received: 'Referral Received',
   intake_review: 'Intake Review',
-  insurance_verification: 'Insurance Verification',
+  insurance_verification: 'Payer Verification',
   prior_authorization: 'Prior Authorization',
   scheduling: 'Scheduling',
   ready_for_claim: 'Ready for Claim',
@@ -277,18 +277,9 @@ export function PatientStatusBadge({ status, stage, onOpenWorkflow, disablePopov
     );
   }
 
-  // Completed — gray by default, green on row hover
+  // Completed — show dash
   if (id === 'complete') {
-    return (
-      <span className={cn(
-        'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium cursor-default transition-colors',
-        'bg-neutral-100 text-neutral-600',
-        'group-hover/row:bg-emerald-100 group-hover/row:text-emerald-700',
-      )}>
-        <span className="text-neutral-500 group-hover/row:text-emerald-500 transition-colors">{s.icon}</span>
-        {s.label}
-      </span>
-    );
+    return <span className="text-text-tertiary">—</span>;
   }
 
   return badge;

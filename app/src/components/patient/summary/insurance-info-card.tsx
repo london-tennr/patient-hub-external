@@ -79,13 +79,13 @@ export function InsuranceInfoCard({ patient }: InsuranceInfoCardProps) {
     <div className="bg-white border border-[#efede9] rounded-md shadow-[0px_1px_2px_0px_rgba(0,0,0,0.05)] overflow-hidden">
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-2 border-b border-[#efede9]">
-        <div className="text-base font-medium lasso:wght-medium leading-6 text-foreground">Insurance</div>
+        <div className="text-base font-medium lasso:wght-medium leading-6 text-foreground">Payer</div>
       </div>
 
       {/* Content */}
       <div className="p-4">
         {!hasInsurance ? (
-          <p className="text-sm text-[#636056]">No insurance on file</p>
+          <p className="text-sm text-[#636056]">No payer on file</p>
         ) : (
           <div className="flex flex-col">
             {patient.primaryInsurance && (

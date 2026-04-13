@@ -172,13 +172,16 @@ export function DocumentsTableCard({ documents, onViewDocument, className }: Doc
       </div>
 
       {/* Table */}
-      <Table className="table-fixed w-full">
+      <Table className="w-full">
         <TableHeader>
           <TableRow className="bg-bg-secondary h-10 border-b border-border hover:bg-bg-secondary">
             {columns.map((col) => (
               <TableHead
                 key={col.key}
-                className="text-muted-foreground font-medium h-full cursor-pointer select-none hover:text-foreground transition-colors"
+                className={cn(
+                  'text-muted-foreground font-medium h-full cursor-pointer select-none hover:text-foreground transition-colors',
+                  (col.key === 'order' || col.key === 'source') && 'hidden md:table-cell'
+                )}
                 onClick={() => handleSort(col.key)}
               >
                 <div className="flex items-center gap-1">
@@ -218,21 +221,21 @@ export function DocumentsTableCard({ documents, onViewDocument, className }: Doc
             filteredDocuments.map(doc => (
               <TableRow
                 key={doc.id}
-                className="h-[52px] border-b border-border hover:bg-accent/50 transition-colors"
+                className="border-b border-border hover:bg-accent/50 transition-colors"
               >
                 <TableCell className="text-foreground">
-                  <span className="truncate block max-w-[200px]">{doc.name}</span>
+                  <span className="break-words text-sm">{doc.name}</span>
                 </TableCell>
-                <TableCell className="text-foreground">
+                <TableCell className="text-foreground text-sm">
                   {documentTypeLabels[doc.type] || doc.type}
                 </TableCell>
-                <TableCell className="text-foreground">
+                <TableCell className="text-foreground text-sm hidden md:table-cell">
                   {doc.orderNumber || doc.orderId || '—'}
                 </TableCell>
-                <TableCell className="text-foreground">
+                <TableCell className="text-foreground text-sm">
                   {formatDate(doc.dateAdded)}
                 </TableCell>
-                <TableCell className="text-foreground">
+                <TableCell className="text-foreground text-sm hidden md:table-cell">
                   {sourceLabels[doc.source] || doc.source}
                 </TableCell>
                 <TableCell>
@@ -248,7 +251,7 @@ export function DocumentsTableCard({ documents, onViewDocument, className }: Doc
                     <ButtonV2
                       variant="outline"
                       size="icon"
-                      className="rounded-full size-9 border-border-secondary hover:bg-accent/50"
+                      className="rounded-full size-9 border-border-secondary hover:bg-accent/50 hidden md:flex"
                       onClick={() => {
                         const link = document.createElement('a');
                         link.href = doc.url;

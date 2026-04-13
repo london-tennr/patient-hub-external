@@ -120,7 +120,7 @@ function generateOrders(count: number): Order[] {
 
     orders.push({
       id: `ORD-${String(i + 1).padStart(4, '0')}`,
-      externalOrderId: `EXT-${String(10000 + i)}`,
+      externalOrderId: `Order-${String(2000001 + i)}`,
       patientId: String(i + 1),
       patientName: `${firstName} ${lastName}`,
       patientDob: randomDob(),

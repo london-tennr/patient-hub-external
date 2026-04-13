@@ -59,7 +59,7 @@ export function PayerContactCard({ insurance }: PayerContactCardProps) {
           </p>
         </div>
         <div className="px-4 py-2 border-t border-border-tertiary">
-          <p className="text-[13px] text-text-tertiary">No insurance on file</p>
+          <p className="text-[13px] text-text-tertiary">No payer on file</p>
         </div>
       </div>
     );

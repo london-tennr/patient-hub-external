@@ -28,8 +28,8 @@ const statusBadgeConfig: Record<
 
 const ORDER_STEPS = [
   { id: 'referral_received', label: 'Referral Received' },
-  { id: 'insurance_verification', label: 'Insurance Verification' },
-  { id: 'insurance_policy_review', label: 'Insurance Policy Review' },
+  { id: 'insurance_verification', label: 'Payer Verification' },
+  { id: 'insurance_policy_review', label: 'Payer Policy Review' },
   { id: 'ready_for_claim', label: 'Ready for Claim Submission' },
 ] as const;
 

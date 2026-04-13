@@ -39,6 +39,7 @@ import {
   Envelope,
   FirstAid,
   ClipboardText,
+  XCircle,
 } from '@phosphor-icons/react';
 import {
   Tabs,
@@ -134,7 +135,7 @@ const stageOrder: PatientStage[] = [
 const stageLabels: Record<PatientStage, string> = {
   referral_received: 'Referral Received',
   intake_review: 'Intake Review',
-  insurance_verification: 'Insurance Verification',
+  insurance_verification: 'Payer Verification',
   prior_authorization: 'Prior Authorization',
   scheduling: 'Scheduling',
   ready_for_claim: 'Ready for Claim',
@@ -155,7 +156,7 @@ interface RunEntry {
 
 const runStages = [
   'Extracting Patient Information',
-  'Verifying Insurance Eligibility',
+  'Verifying Payer Eligibility',
   'Processing Prior Authorization',
   'Validating Order Details',
   'Submitting Claim',
@@ -437,22 +438,22 @@ function OrdersTabContent({ orders, onSelectOrder }: { orders: Order[]; onSelect
           No orders match your search
         </div>
       ) : (
-        <Table className="table-fixed w-full">
+        <Table className="w-full">
           <TableHeader>
             <TableRow className="bg-bg-secondary h-10 border-b border-border hover:bg-bg-secondary">
               {([
-                { key: 'orderName' as SortColumn, label: 'Order type', sortable: false, width: 'w-[14%]' },
-                { key: 'status' as SortColumn, label: 'Status', sortable: false, width: 'w-[12%]' },
-                { key: 'stage' as SortColumn, label: 'Stage', sortable: false, width: 'w-[12%]' },
-                { key: 'statusUpdated' as SortColumn, label: 'Status updated', sortable: false, width: 'w-[12%]' },
-                { key: 'orderAge' as SortColumn, label: 'Order age', sortable: true, width: 'w-[10%]' },
-                { key: 'facility' as SortColumn, label: 'Facility and Practitioner', sortable: false, width: 'w-[40%]' },
+                { key: 'orderName' as SortColumn, label: 'Order type', sortable: false, hideMobile: false },
+                { key: 'status' as SortColumn, label: 'Status', sortable: false, hideMobile: false },
+                { key: 'stage' as SortColumn, label: 'Stage', sortable: false, hideMobile: true },
+                { key: 'statusUpdated' as SortColumn, label: 'Status updated', sortable: false, hideMobile: true },
+                { key: 'orderAge' as SortColumn, label: 'Order age', sortable: true, hideMobile: true },
+                { key: 'facility' as SortColumn, label: 'Facility and Practitioner', sortable: false, hideMobile: false },
               ]).map((col) => (
                 <TableHead
                   key={col.key}
                   className={cn(
                     'text-muted-foreground font-medium h-full',
-                    col.width,
+                    col.hideMobile && 'hidden md:table-cell',
                     col.sortable && 'cursor-pointer select-none hover:text-foreground transition-colors'
                   )}
                   onClick={col.sortable ? () => handleSort(col.key) : undefined}
@@ -487,31 +488,34 @@ function OrdersTabContent({ orders, onSelectOrder }: { orders: Order[]; onSelect
               <TableRow
                 key={order.id}
                 onClick={() => onSelectOrder(order)}
-                className="cursor-pointer h-[60px] border-b border-border hover:bg-accent/50 transition-colors"
+                className="cursor-pointer border-b border-border hover:bg-accent/50 transition-colors"
               >
                 <TableCell className="text-foreground">
-                  <span className="text-sm font-medium">{order.orderName}</span>
+                  <div className="flex flex-col">
+                    <span className="text-sm font-medium break-words">{order.orderName}</span>
+                    <span className="text-xs text-text-tertiary">{order.externalOrderId}</span>
+                  </div>
                 </TableCell>
                 <TableCell className="text-foreground">
                   <Badge variant={orderStatusVariant[order.status]} className="text-xs">
                     {orderStatusLabel[order.status]}
                   </Badge>
                 </TableCell>
-                <TableCell className="text-foreground">
+                <TableCell className="text-foreground hidden md:table-cell">
                   <span className="text-sm text-text-secondary">{orderStageLabel[order.stage]}</span>
                 </TableCell>
-                <TableCell className="text-foreground">
+                <TableCell className="text-foreground hidden md:table-cell">
                   <span className="text-sm text-text-secondary">{formatOrderAge(order.statusUpdated)}</span>
                 </TableCell>
-                <TableCell className="text-foreground">
+                <TableCell className="text-foreground hidden md:table-cell">
                   <span className="text-sm text-text-secondary">{order.orderAge}</span>
                 </TableCell>
                 <TableCell className="text-foreground">
                   <div className="flex flex-col gap-0.5 min-w-0">
-                    <span className="text-sm font-medium text-text-primary truncate">
+                    <span className="text-sm font-medium text-text-primary break-words">
                       {order.referringFacility ?? '—'}
                     </span>
-                    <span className="text-xs text-text-tertiary uppercase tracking-wide truncate">
+                    <span className="text-xs text-text-tertiary uppercase tracking-wide break-words">
                       {order.referringPractitioner ?? '—'}
                     </span>
                   </div>
@@ -587,7 +591,7 @@ type StepStatus = 'completed' | 'current' | 'running' | 'blocked' | 'attention' 
 const stageDescriptions: Record<PatientStage, string> = {
   referral_received: 'Referral documents received and logged into the system',
   intake_review: 'Patient demographics and order details reviewed for accuracy',
-  insurance_verification: 'Verifying coverage, eligibility, and benefits with the carrier',
+  insurance_verification: 'Verifying coverage, eligibility, and benefits with the payer',
   prior_authorization: 'Submitting and tracking prior authorization with the payer',
   scheduling: 'Coordinating delivery or service appointment with the patient',
   ready_for_claim: 'All documentation gathered and claim package prepared',
@@ -908,7 +912,7 @@ function getActivityChangeLog(activity: TimelineActivity): ChangeLogEntry[] {
         { field: 'Address', before: '123 Main Street, Apt 4B, Springfield, IL 62704', after: '456 Oak Avenue, Suite 200, Riverside, CA 92501' },
       ];
     }
-    if (desc.includes('insurance')) {
+    if (desc.includes('payer') || desc.includes('insurance')) {
       return [
         { field: 'Carrier', before: 'Blue Cross Blue Shield — Bronze HMO', after: 'Aetna — Gold PPO' },
         { field: 'Member ID', before: 'BCBS-881234', after: 'AET-990421' },
@@ -947,7 +951,7 @@ function getActivityChangeLog(activity: TimelineActivity): ChangeLogEntry[] {
         { field: 'Status', before: 'Pending', after: 'In Progress' },
       ];
     }
-    if (desc.includes('insurance verified')) {
+    if (desc.includes('payer verified') || desc.includes('insurance verified')) {
       return [
         { field: 'Verification', before: 'Unverified', after: 'Verified — Active' },
         { field: 'Verified By', before: '—', after: 'System (Auto)' },
@@ -984,7 +988,7 @@ function getActivityNotes(activity: TimelineActivity): NoteEntry[] {
         timestamp: new Date(new Date(activity.timestamp).getTime() - 2 * 60 * 60 * 1000).toISOString(),
       },
       {
-        content: 'Initial intake call completed. Patient is new to CPAP therapy. Insurance pre-verified.',
+        content: 'Initial intake call completed. Patient is new to CPAP therapy. Payer pre-verified.',
         author: 'Mike Rivera',
         timestamp: new Date(new Date(activity.timestamp).getTime() - 3 * 24 * 60 * 60 * 1000).toISOString(),
       },
@@ -1225,8 +1229,8 @@ function SidebarActivityDetail({ activity, onClose }: { activity: TimelineActivi
 
 const SIDEBAR_ORDER_STEPS = [
   { id: 'referral', label: 'Referral Received' },
-  { id: 'insurance_verification', label: 'Insurance Verification' },
-  { id: 'insurance_policy_review', label: 'Insurance Policy Review' },
+  { id: 'insurance_verification', label: 'Payer Verification' },
+  { id: 'insurance_policy_review', label: 'Payer Policy Review' },
   { id: 'ready_for_claim', label: 'Ready for Claim Submission' },
 ] as const;
 
@@ -1237,7 +1241,7 @@ const orderStageToCompleted: Record<OrderStage, number> = {
   complete: 4,
 };
 
-const ORDER_TABS = ['Order processing', 'Call history', 'Documents', 'Notes'];
+const ORDER_TABS = ['Order processing', 'Call history', 'Documents'];
 
 function formatSidebarDob(dob: string): string {
   const date = new Date(dob + 'T00:00:00');
@@ -1267,23 +1271,24 @@ function SidebarOrderDetail({ order, patient, onClose }: { order: Order; patient
   const orderStatusConfig = statusBadgeConfig[order.status];
   const completedCount = orderStageToCompleted[order.stage];
 
-  const formatNoteDate = (dateStr: string) => {
-    const d = new Date(dateStr);
+  const formatTs = (dateStr: string) => {
+    const d = new Date(dateStr.includes('T') ? dateStr : dateStr + 'T00:00:00');
     return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' });
   };
 
-  const formatTimestamp = (dateStr: string) => {
-    const d = new Date(dateStr + 'T00:00:00');
-    const date = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-    const time = d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
-    return `${date} at ${time}`;
+  const formatShortDate = (dateStr: string) => {
+    const d = new Date(dateStr.includes('T') ? dateStr : dateStr + 'T00:00:00');
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   };
 
   return (
     <div className="flex-1 overflow-y-auto">
-      {/* Header with close */}
-      <div className="flex items-center justify-between px-4 pt-4 pb-2">
-        <p className="text-[20px] font-medium lasso:wght-medium leading-7 text-text-primary">{order.orderName}</p>
+      {/* Header */}
+      <div className="flex items-start justify-between px-5 pt-5 pb-1">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <h2 className="text-xl font-semibold text-text-primary truncate">{order.orderName}</h2>
+          <Badge variant={orderStatusConfig.variant} className="shrink-0">{orderStatusConfig.label}</Badge>
+        </div>
         <Button
           variant="ghost"
           size="icon"
@@ -1293,198 +1298,170 @@ function SidebarOrderDetail({ order, patient, onClose }: { order: Order; patient
           <SidebarSimple className="size-4" />
         </Button>
       </div>
+      <div className="flex items-center gap-2 px-5 pb-4">
+        <span className="text-xs text-text-tertiary">Ext ID: {order.externalOrderId}</span>
+        <span className="text-xs text-text-tertiary">/</span>
+        <span className="text-xs text-text-tertiary">ID: {order.id}</span>
+      </div>
 
-      <div className="flex flex-col gap-5 px-4 pb-6">
-        {/* Order type + Status */}
-        <div className="flex items-center gap-3">
-          <Badge variant={orderStatusConfig.variant}>{orderStatusConfig.label}</Badge>
-          <span className="text-xs text-text-tertiary">Order {order.id}</span>
+      {/* Horizontal progress bar */}
+      <div className="px-5 pb-2">
+        <div className="flex w-full gap-1">
+          {SIDEBAR_ORDER_STEPS.map((step, i) => (
+            <div
+              key={step.id}
+              className={cn(
+                'h-1 flex-1 rounded-full',
+                i < completedCount ? 'bg-amber-400' : 'bg-border-secondary'
+              )}
+            />
+          ))}
         </div>
-
-        {/* Stage tracker */}
-        <div className="flex flex-col gap-2">
-          <span className="text-[11px] font-medium text-text-tertiary uppercase tracking-wider">Processing Stage</span>
-          <div className="flex flex-col">
-            {SIDEBAR_ORDER_STEPS.map((step, i) => {
-              const isCompleted = i < completedCount;
-              const isCurrent = i === completedCount;
-              const isLast = i === SIDEBAR_ORDER_STEPS.length - 1;
-
-              return (
-                <div key={step.id} className="flex gap-3">
-                  <div className="flex flex-col items-center">
-                    {isCompleted || isCurrent ? (
-                      <div className="size-3 rounded-full bg-[var(--green-9)] shrink-0 mt-1" />
-                    ) : (
-                      <div className="size-3 rounded-full bg-border-secondary shrink-0 mt-1" />
-                    )}
-                    {!isLast && (
-                      <div className={cn(
-                        'w-px flex-1 min-h-[20px] mt-1 mb-1',
-                        isCompleted ? 'bg-border-success-primary' : 'bg-border-secondary'
-                      )} />
-                    )}
-                  </div>
-                  <div className={cn('flex flex-col pb-3', isLast && 'pb-0')}>
-                    <span className={cn(
-                      'text-sm leading-5',
-                      isCompleted || isCurrent ? 'text-text-primary font-medium lasso:wght-medium' : 'text-text-tertiary'
-                    )}>
-                      {step.label}
-                    </span>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+        <div className="flex w-full mt-1.5">
+          {SIDEBAR_ORDER_STEPS.map((step, i) => (
+            <span
+              key={step.id}
+              className={cn(
+                'flex-1 text-[11px]',
+                i < completedCount ? 'text-text-primary font-medium' : 'text-text-tertiary'
+              )}
+            >
+              {step.label}
+            </span>
+          ))}
         </div>
+      </div>
 
-        {/* Order items */}
+      {/* Sections */}
+      <div className="flex flex-col px-5 pb-6">
+
+        {/* Items */}
         {order.items.length > 0 && (
-          <div className="flex flex-col gap-2">
-            <span className="text-[11px] font-medium text-text-tertiary uppercase tracking-wider">Order Items</span>
-            <div className="border border-border-tertiary rounded-md overflow-hidden">
-              {order.items.map((item, i) => (
-                <div
-                  key={item.id}
-                  className={cn(
-                    'flex items-start justify-between px-3 py-2.5 hover:bg-accent/50 transition-colors',
-                    i < order.items.length - 1 && 'border-b border-border-tertiary'
-                  )}
-                >
-                  <div className="flex flex-col gap-0.5 min-w-0 flex-1">
-                    <span className="text-sm text-text-primary">{item.product}</span>
-                    <span className="text-xs text-text-tertiary truncate">{item.description}</span>
+          <div className="py-5 border-t border-border-secondary">
+            <span className="text-[11px] font-medium text-text-tertiary uppercase tracking-wider">Items</span>
+            <div className="flex flex-col gap-3 mt-3">
+              {order.items.map((item) => (
+                <div key={item.id} className="flex items-start gap-2.5">
+                  <Tag weight="regular" className="size-4 text-text-tertiary shrink-0 mt-0.5" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-text-primary leading-snug">{item.product}</p>
+                    <p className="text-xs text-text-tertiary mt-0.5 leading-snug">{item.hcpcsCode}, {item.description}</p>
                   </div>
-                  <div className="flex flex-col items-end gap-0.5 shrink-0 ml-3">
-                    <span className="text-xs font-medium text-text-secondary">{item.hcpcsCode}</span>
-                    <span className="text-xs text-text-tertiary">Qty: {item.quantity}</span>
-                  </div>
+                  <span className="text-sm text-text-primary shrink-0">{item.quantity}</span>
                 </div>
               ))}
             </div>
           </div>
         )}
 
-        {/* Missing information */}
+        {/* Missing Information */}
         {order.missingInfo && order.missingInfo.length > 0 && (
-          <div className="flex flex-col gap-2">
-            <span className="text-[11px] font-medium text-text-warning-primary uppercase tracking-wider">Missing Information</span>
-            <div className="border border-dashed border-border-warning-primary rounded-md bg-bg-warning-secondary px-3 py-2.5">
-              <ul className="flex flex-col gap-1.5">
-                {order.missingInfo.map((info, i) => (
-                  <li key={i} className="text-sm text-text-warning-primary flex items-start gap-2">
-                    <span className="shrink-0 mt-1.5 size-1 rounded-full bg-text-warning-primary" />
-                    {info}
-                  </li>
-                ))}
-              </ul>
+          <div className="py-5 border-t border-border-secondary">
+            <span className="text-[11px] font-medium text-text-tertiary uppercase tracking-wider">Missing Information</span>
+            <div className="flex flex-col mt-3">
+              {order.missingInfo.map((info, i) => (
+                <MissingInfoRow key={i} label={info} date={formatShortDate(order.statusUpdated)} />
+              ))}
             </div>
           </div>
         )}
 
-        {/* Rejection reasons */}
+        {/* Rejection Reasons */}
         {order.rejectionReasons && order.rejectionReasons.length > 0 && (
-          <div className="flex flex-col gap-2">
-            <span className="text-[11px] font-medium text-text-error-primary uppercase tracking-wider">Rejection Reasons</span>
-            <div className="border border-border-error-secondary rounded-md bg-bg-error-secondary px-3 py-2.5">
-              <ul className="flex flex-col gap-1.5">
-                {order.rejectionReasons.map((reason, i) => (
-                  <li key={i} className="text-sm text-text-error-primary flex items-start gap-2">
-                    <span className="shrink-0 mt-1.5 size-1 rounded-full bg-text-error-primary" />
-                    {reason}
-                  </li>
-                ))}
-              </ul>
+          <div className="py-5 border-t border-border-secondary">
+            <span className="text-[11px] font-medium text-text-tertiary uppercase tracking-wider">Rejection Reasons</span>
+            <div className="flex flex-col mt-3">
+              {order.rejectionReasons.map((reason, i) => (
+                <RejectionReasonRow key={i} label={reason} date={formatShortDate(order.statusUpdated)} />
+              ))}
             </div>
           </div>
         )}
 
         {/* Referring Practitioner */}
-        {order.referringPractitioner && (
-          <div className="flex flex-col gap-2">
-            <span className="text-[11px] font-medium text-text-tertiary uppercase tracking-wider">Referring Practitioner</span>
-            <div className="border border-border-tertiary rounded-md px-3 py-2.5 flex flex-col gap-2">
-              <div className="flex items-center gap-4">
-                <span className="text-xs text-text-tertiary w-20 shrink-0">Name</span>
-                <span className="text-sm font-medium text-text-primary">{order.referringPractitioner}</span>
-              </div>
-              <div className="flex items-center gap-4">
-                <span className="text-xs text-text-tertiary w-20 shrink-0">NPI</span>
-                <span className="text-sm text-text-primary">{order.referringPractitionerNpi ?? '—'}</span>
-              </div>
-              <div className="flex items-center gap-4">
-                <span className="text-xs text-text-tertiary w-20 shrink-0">Credentials</span>
-                <span className="text-sm text-text-primary">{order.referringPractitionerCredentials ?? '—'}</span>
-              </div>
-              <div className="flex items-start gap-4">
-                <span className="text-xs text-text-tertiary w-20 shrink-0">Address</span>
-                <span className="text-sm text-text-primary">{order.referringPractitionerAddress ?? '—'}</span>
-              </div>
-            </div>
+        <div className="py-5 border-t border-border-secondary">
+          <span className="text-[11px] font-medium text-text-tertiary uppercase tracking-wider">Referring Practitioner</span>
+          <div className="flex flex-col gap-1.5 mt-3">
+            <SidebarFieldRow label="Name" value={order.referringPractitioner ?? '—'} />
+            <SidebarFieldRow label="NPI" value={order.referringPractitionerNpi ?? '—'} />
+            <SidebarFieldRow label="Credentials" value={order.referringPractitionerCredentials ?? '—'} />
+            <SidebarFieldRow label="Address" value={order.referringPractitionerAddress ?? '—'} />
           </div>
-        )}
+        </div>
 
         {/* Referring Facility */}
-        {order.referringFacility && (
-          <div className="flex flex-col gap-2">
-            <span className="text-[11px] font-medium text-text-tertiary uppercase tracking-wider">Referring Facility</span>
-            <div className="border border-border-tertiary rounded-md px-3 py-2.5 flex flex-col gap-2">
-              <div className="flex items-center gap-4">
-                <span className="text-xs text-text-tertiary w-20 shrink-0">Name</span>
-                <span className="text-sm font-medium text-text-primary">{order.referringFacility}</span>
-              </div>
-              <div className="flex items-center gap-4">
-                <span className="text-xs text-text-tertiary w-20 shrink-0">NPI</span>
-                <span className="text-sm text-text-primary">{order.referringFacilityNpi ?? '—'}</span>
-              </div>
-              <div className="flex items-start gap-4">
-                <span className="text-xs text-text-tertiary w-20 shrink-0">Address</span>
-                <span className="text-sm text-text-primary">{order.referringFacilityAddress ?? '—'}</span>
-              </div>
-            </div>
+        <div className="py-5 border-t border-border-secondary">
+          <span className="text-[11px] font-medium text-text-tertiary uppercase tracking-wider">Referring Facility</span>
+          <div className="flex flex-col gap-1.5 mt-3">
+            <SidebarFieldRow label="Name" value={order.referringFacility ?? '—'} />
+            <SidebarFieldRow label="NPI" value={order.referringFacilityNpi ?? '—'} />
+            <SidebarFieldRow label="Address" value={order.referringFacilityAddress ?? '—'} />
           </div>
-        )}
-
-        {/* Notes */}
-        {order.notes.length > 0 && (
-          <div className="flex flex-col gap-2">
-            <span className="text-[11px] font-medium text-text-tertiary uppercase tracking-wider">Notes</span>
-            <div className="border border-border-tertiary rounded-md overflow-hidden">
-              {order.notes.map((note, i) => (
-                <div
-                  key={note.id}
-                  className={cn(
-                    'px-3 py-2.5 flex flex-col gap-1 hover:bg-accent/50 transition-colors',
-                    i < order.notes.length - 1 && 'border-b border-border-tertiary'
-                  )}
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-xs font-medium text-text-primary">{note.author}</span>
-                    <span className="text-[11px] text-text-tertiary shrink-0">{formatNoteDate(note.createdAt)}</span>
-                  </div>
-                  <p className="text-sm text-text-secondary leading-relaxed">{note.content}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
+        </div>
 
         {/* Timestamps */}
-        <div className="flex flex-col gap-2">
-          <span className="text-[11px] font-medium text-text-tertiary uppercase tracking-wider">Timeline</span>
-          <div className="border border-border-tertiary rounded-md px-3 py-2.5 flex flex-col gap-1.5">
-            <div className="flex items-center justify-between">
-              <span className="text-xs text-text-tertiary">Created</span>
-              <span className="text-sm text-text-primary">{formatTimestamp(order.dateCreated)}</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-xs text-text-tertiary">Last updated</span>
-              <span className="text-sm text-text-primary">{formatTimestamp(order.lastUpdated)}</span>
-            </div>
+        <div className="py-5 border-t border-border-secondary">
+          <span className="text-[11px] font-medium text-text-tertiary uppercase tracking-wider">Timestamps</span>
+          <div className="flex flex-col gap-1.5 mt-3">
+            <SidebarFieldRow label="Created" value={formatTs(order.dateCreated)} />
+            <SidebarFieldRow label="Updated" value={formatTs(order.lastUpdated)} />
+            <SidebarFieldRow label="Status Updated" value={formatTs(order.statusUpdated)} />
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+function SidebarFieldRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-baseline gap-4">
+      <span className="text-sm text-text-tertiary w-28 shrink-0">{label}</span>
+      <span className="text-sm text-text-primary">{value}</span>
+    </div>
+  );
+}
+
+function MissingInfoRow({ label, date }: { label: string; date: string }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="border-b border-border-secondary last:border-b-0">
+      <button
+        onClick={() => setOpen(!open)}
+        className="flex items-center gap-2 w-full py-2.5 text-left cursor-pointer"
+      >
+        <CaretDown className={cn('size-3.5 text-text-tertiary transition-transform', !open && '-rotate-90')} />
+        <WarningCircle weight="regular" className="size-4 text-amber-500 shrink-0" />
+        <span className="text-sm text-text-primary flex-1">{label}</span>
+        <span className="text-xs text-text-tertiary shrink-0">{date}</span>
+      </button>
+      {open && (
+        <div className="pl-10 pb-3">
+          <p className="text-xs text-text-secondary">No additional details available.</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function RejectionReasonRow({ label, date }: { label: string; date: string }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="border-b border-border-secondary last:border-b-0">
+      <button
+        onClick={() => setOpen(!open)}
+        className="flex items-center gap-2 w-full py-2.5 text-left cursor-pointer"
+      >
+        <CaretDown className={cn('size-3.5 text-text-tertiary transition-transform', !open && '-rotate-90')} />
+        <XCircle weight="regular" className="size-4 text-red-500 shrink-0" />
+        <span className="text-sm text-text-primary flex-1">{label}</span>
+        <span className="text-xs text-text-tertiary shrink-0">{date}</span>
+      </button>
+      {open && (
+        <div className="pl-10 pb-3">
+          <p className="text-xs text-text-secondary">No additional details available.</p>
+        </div>
+      )}
     </div>
   );
 }
@@ -1654,7 +1631,7 @@ export function PatientSummaryVariantB({
 
   const auditLogEntries: TimelineActivity[] = useMemo(() => [
     { id: 'audit-1', type: 'ehr_log', title: 'Patient record accessed', description: 'Demographics viewed via EHR portal', ehrSystem: 'Epic', timestamp: '2026-04-08T09:14:00Z' },
-    { id: 'audit-2', type: 'ehr_log', title: 'Insurance eligibility queried', description: 'Real-time 270/271 transaction sent to Aetna', ehrSystem: 'Athenahealth', timestamp: '2026-04-07T16:42:00Z' },
+    { id: 'audit-2', type: 'ehr_log', title: 'Payer eligibility queried', description: 'Real-time 270/271 transaction sent to Aetna', ehrSystem: 'Athenahealth', timestamp: '2026-04-07T16:42:00Z' },
     { id: 'audit-3', type: 'ehr_log', title: 'Order ORD001 synced to EHR', description: 'Aerosol Mask order pushed via HL7 ADT feed', ehrSystem: 'Epic', timestamp: '2026-04-07T11:05:00Z' },
     { id: 'audit-4', type: 'ehr_log', title: 'Patient demographics updated', description: 'Address changed from EHR sync — 123 Main St → 456 Oak Ave', ehrSystem: 'Cerner', timestamp: '2026-04-06T14:30:00Z' },
     { id: 'audit-5', type: 'ehr_log', title: 'Clinical document received', description: 'Sleep study report ingested from referring provider fax', ehrSystem: 'Epic', timestamp: '2026-04-06T10:18:00Z' },
@@ -1757,10 +1734,10 @@ export function PatientSummaryVariantB({
   return (
     <div ref={containerRef} className="flex flex-1 gap-0 h-full">
       {/* Main Content Area Panel */}
-      <main className="flex-1 flex flex-col h-full overflow-hidden bg-bg-primary rounded-xs shadow-[0_0_6px_1px_rgba(0,0,0,0.03),0_4px_6px_-1px_rgba(0,0,0,0.10),0_2px_4px_-2px_rgba(0,0,0,0.10)]">
+      <main className="flex-1 flex flex-col h-full overflow-hidden min-w-0 bg-bg-primary rounded-xs shadow-[0_0_6px_1px_rgba(0,0,0,0.03),0_4px_6px_-1px_rgba(0,0,0,0.10),0_2px_4px_-2px_rgba(0,0,0,0.10)]">
         <Tabs value={activeMainTab} onValueChange={handleTabChange} className="flex-1 flex flex-col h-full overflow-hidden">
           {/* Fixed Header Section */}
-          <div className="pt-6 px-6 flex flex-col items-start w-full bg-bg-primary shrink-0">
+          <div className="pt-4 px-4 md:pt-6 md:px-6 flex flex-col items-start w-full bg-bg-primary shrink-0">
             <div className="flex items-center justify-between w-full">
               <div className="flex flex-col gap-1 items-start">
                 {/* Breadcrumb */}
@@ -1772,7 +1749,7 @@ export function PatientSummaryVariantB({
                   <span className="text-text-primary font-medium">Patient Profile</span>
                 </nav>
                 {/* Title */}
-                <h2 className="text-[30px] leading-[36px] font-serif font-light text-text-primary">
+                <h2 className="text-xl leading-[28px] md:text-[30px] md:leading-[36px] font-serif font-light text-text-primary">
                   {patient.firstName} {patient.lastName}
                 </h2>
                 <p className="text-sm text-text-secondary flex items-center gap-0.5">
@@ -1782,7 +1759,7 @@ export function PatientSummaryVariantB({
               </div>
 
               {/* Contact Info, Sync Status and Sidebar Toggle */}
-              <div className="flex flex-col items-end gap-1 self-start pt-1">
+              <div className="hidden md:flex flex-col items-end gap-1 self-start pt-1">
                 <div className="flex items-center gap-2">
                   <p className="text-xs text-text-tertiary">
                     Last activity today at 9:15 AM
@@ -1792,8 +1769,8 @@ export function PatientSummaryVariantB({
             </div>
 
             {/* Main Tabs Navigation */}
-            <nav className="w-full h-10 mt-4 relative border-b border-border">
-              <TabsList className="inline-flex h-full items-center justify-start bg-transparent p-0 gap-0">
+            <nav className="w-full h-10 mt-4 relative border-b border-border overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              <TabsList className="inline-flex h-full items-center justify-start bg-transparent p-0 gap-0 min-w-max">
                 <TabsTrigger
                   value="activity"
                   className={cn(
@@ -1828,7 +1805,7 @@ export function PatientSummaryVariantB({
                     'data-[state=inactive]:text-muted-foreground data-[state=inactive]:font-normal hover:text-foreground'
                   )}
                 >
-                  Insurance
+                  Payer
                 </TabsTrigger>
                 <TabsTrigger
                   value="orders"
@@ -1841,18 +1818,6 @@ export function PatientSummaryVariantB({
                   )}
                 >
                   Orders
-                </TabsTrigger>
-                <TabsTrigger
-                  value="notes"
-                  className={cn(
-                    'relative px-2 h-full inline-flex items-center justify-center text-sm transition-colors rounded-none border-0 shadow-none',
-                    'bg-transparent hover:bg-transparent data-[state=active]:bg-transparent data-[state=active]:shadow-none',
-                    'after:absolute after:bottom-[-1px] after:left-0 after:right-0 after:h-[2px]',
-                    'data-[state=active]:text-foreground data-[state=active]:font-medium data-[state=active]:after:bg-brand-terracotta',
-                    'data-[state=inactive]:text-muted-foreground data-[state=inactive]:font-normal hover:text-foreground'
-                  )}
-                >
-                  Notes
                 </TabsTrigger>
                 <TabsTrigger
                   value="documents"
@@ -1871,7 +1836,7 @@ export function PatientSummaryVariantB({
           </div>
 
           {/* Scrollable Tab Content */}
-          <div className="flex-1 overflow-y-auto px-6 pt-4 pb-6">
+          <div className="flex-1 overflow-y-auto px-4 md:px-6 pt-4 pb-6">
             {/* Activity Tab */}
             <TabsContent value="activity" className="mt-0">
               <Timeline activities={activities} onAddComment={onAddComment} onSelectActivity={handleSelectActivity} />
@@ -1882,16 +1847,16 @@ export function PatientSummaryVariantB({
               <DemographicsForm patient={patient} />
             </TabsContent>
 
-            {/* Insurance Tab */}
+            {/* Payer Tab */}
             <TabsContent value="insurance" className="mt-0">
               <div className="space-y-6">
                 <InsuranceForm
                   insurance={patient.primaryInsurance}
-                  title="Primary Insurance"
+                  title="Primary Payer"
                 />
                 <InsuranceForm
                   insurance={patient.secondaryInsurance}
-                  title="Secondary Insurance"
+                  title="Secondary Payer"
                 />
                 <VerificationHistory history={mockVerificationHistory} />
               </div>
@@ -1900,18 +1865,6 @@ export function PatientSummaryVariantB({
             {/* Orders Tab */}
             <TabsContent value="orders" className="mt-0">
               <OrdersTabContent orders={orders} onSelectOrder={handleSelectOrder} />
-            </TabsContent>
-
-            {/* Notes Tab */}
-            <TabsContent value="notes" className="mt-0">
-              <div className="bg-bg-white border border-border-tertiary rounded-md shadow-xs overflow-hidden">
-                <div className="flex items-center justify-between px-4 py-2 border-b border-border-tertiary">
-                  <div className="text-base font-medium lasso:wght-medium leading-6 text-foreground">Notes</div>
-                </div>
-                <div className="p-4">
-                  <p className="text-sm text-text-secondary">No notes available</p>
-                </div>
-              </div>
             </TabsContent>
 
             {/* Documents Tab */}
@@ -1926,7 +1879,7 @@ export function PatientSummaryVariantB({
       {/* Resize Handle */}
       <div
         className={cn(
-          "h-full flex items-center justify-center cursor-col-resize group shrink-0",
+          "hidden md:flex h-full items-center justify-center cursor-col-resize group shrink-0",
           "transition-[width,opacity] duration-300 ease-in-out",
           isRightSidebarOpen ? "w-2 opacity-100" : "w-0 opacity-0 pointer-events-none"
         )}
@@ -1944,7 +1897,7 @@ export function PatientSummaryVariantB({
       {/* Right Sidebar Panel */}
       <aside
         className={cn(
-          "rounded-xs shadow-[0_0_6px_1px_rgba(0,0,0,0.03),0_4px_6px_-1px_rgba(0,0,0,0.10),0_2px_4px_-2px_rgba(0,0,0,0.10)] flex flex-col h-full shrink-0",
+          "hidden md:flex rounded-xs shadow-[0_0_6px_1px_rgba(0,0,0,0.03),0_4px_6px_-1px_rgba(0,0,0,0.10),0_2px_4px_-2px_rgba(0,0,0,0.10)] flex-col h-full shrink-0",
           "overflow-hidden",
           !isResizing && "transition-[width,opacity] duration-300 ease-in-out",
           !isRightSidebarOpen && "opacity-0"
@@ -2063,7 +2016,7 @@ export function PatientSummaryVariantB({
                   onClick={() => toggleSection('insurance')}
                   className="flex items-center justify-between px-4 h-[40px] w-full hover:bg-bg-secondary/50 transition-colors"
                 >
-                  <span className="text-base font-medium lasso:wght-medium leading-6 text-text-primary">Insurance</span>
+                  <span className="text-base font-medium lasso:wght-medium leading-6 text-text-primary">Payer</span>
                   <CaretDown className={cn(
                     "size-4 text-text-tertiary transition-transform duration-200",
                     !expandedSections.insurance && "-rotate-90"
@@ -2181,6 +2134,176 @@ export function PatientSummaryVariantB({
           </div>
         </div>
       </aside>
+
+      {/* Mobile sidebar overlay */}
+      <div className={cn(
+        "fixed inset-0 z-40 bg-bg-white flex-col md:hidden",
+        isRightSidebarOpen ? "flex" : "hidden"
+      )}>
+        {/* Close button header */}
+        <div className="flex items-center justify-between px-4 h-12 border-b border-border-tertiary shrink-0">
+          <span className="text-sm font-medium text-text-primary">Details</span>
+          <button
+            onClick={() => { setIsRightSidebarOpen(false); setSidebarDetailView({ kind: 'patient' }); }}
+            className="size-8 flex items-center justify-center"
+          >
+            <XIcon className="size-4 text-text-tertiary" />
+          </button>
+        </div>
+        {/* Sidebar content */}
+        <div className="flex-1 overflow-y-auto">
+          {sidebarDetailView.kind === 'activity' && (
+            <SidebarActivityDetail activity={sidebarDetailView.activity} onClose={() => { setIsRightSidebarOpen(false); setSidebarDetailView({ kind: 'patient' }); }} />
+          )}
+          {sidebarDetailView.kind === 'order' && (
+            <SidebarOrderDetail order={sidebarDetailView.order} patient={patient} onClose={() => { setIsRightSidebarOpen(false); setSidebarDetailView({ kind: 'patient' }); }} />
+          )}
+          {sidebarDetailView.kind === 'document' && (
+            <SidebarDocumentDetail document={sidebarDetailView.document} onClose={() => { setIsRightSidebarOpen(false); setSidebarDetailView({ kind: 'patient' }); }} />
+          )}
+          {sidebarDetailView.kind === 'patient' && (
+            <div className="flex flex-col h-full">
+              {/* Patient Section */}
+              <div className="border-b border-border-secondary">
+                <button
+                  onClick={() => toggleSection('patient')}
+                  className="flex items-center justify-between px-4 h-[40px] w-full hover:bg-bg-secondary/50 transition-colors"
+                >
+                  <span className="text-base font-medium lasso:wght-medium leading-6 text-text-primary">Patient</span>
+                  <CaretDown className={cn("size-4 text-text-tertiary transition-transform duration-200", !expandedSections.patient && "-rotate-90")} />
+                </button>
+                <div className={cn("grid transition-[grid-template-rows] duration-300 ease-in-out", expandedSections.patient ? "grid-rows-[1fr]" : "grid-rows-[0fr]")}>
+                  <div className="overflow-hidden">
+                    <div className="px-4 pb-4">
+                      <div className="space-y-4">
+                        <div>
+                          <p className="text-[11px] font-medium text-text-tertiary uppercase tracking-wide mb-1">Contact</p>
+                          <a href={`mailto:${patient.email}`} className="text-sm text-brand-terracotta block leading-6">{patient.email}</a>
+                          <p className="text-sm text-text-primary leading-6">{patient.phone}</p>
+                        </div>
+                        <div>
+                          <p className="text-[11px] font-medium text-text-tertiary uppercase tracking-wide mb-1">Primary Address</p>
+                          <p className="text-sm text-text-primary leading-5">{patient.address.street}, {patient.address.city}, {patient.address.state} {patient.address.zip}</p>
+                        </div>
+                        {patient.deliveryAddress && (
+                          <div>
+                            <p className="text-[11px] font-medium text-text-tertiary uppercase tracking-wide mb-1">Delivery Address</p>
+                            <p className="text-sm text-text-primary leading-5">{patient.deliveryAddress.street}, {patient.deliveryAddress.city}, {patient.deliveryAddress.state} {patient.deliveryAddress.zip}</p>
+                          </div>
+                        )}
+                      </div>
+                      <div className="border-t border-border-secondary my-4" />
+                      <div className="space-y-4">
+                        <div>
+                          <p className="text-[11px] font-medium text-text-tertiary uppercase tracking-wide mb-1">DOB</p>
+                          <p className="text-sm text-text-primary leading-5">{formatDate(patient.dob)}</p>
+                        </div>
+                        <div>
+                          <p className="text-[11px] font-medium text-text-tertiary uppercase tracking-wide mb-1">Patient ID</p>
+                          <p className="text-sm text-text-primary leading-5">{patient.patientId}</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              {/* Insurance Section */}
+              <div className="border-b border-border-secondary">
+                <button
+                  onClick={() => toggleSection('insurance')}
+                  className="flex items-center justify-between px-4 h-[40px] w-full hover:bg-bg-secondary/50 transition-colors"
+                >
+                  <span className="text-base font-medium lasso:wght-medium leading-6 text-text-primary">Payer</span>
+                  <CaretDown className={cn("size-4 text-text-tertiary transition-transform duration-200", !expandedSections.insurance && "-rotate-90")} />
+                </button>
+                <div className={cn("grid transition-[grid-template-rows] duration-300 ease-in-out", expandedSections.insurance ? "grid-rows-[1fr]" : "grid-rows-[0fr]")}>
+                  <div className="overflow-hidden">
+                    <div className="px-4 pb-4">
+                      <div className="space-y-4">
+                        <div>
+                          <p className="text-[11px] font-medium text-text-tertiary uppercase tracking-wide mb-1">Primary</p>
+                          <p className="text-sm font-medium text-text-primary leading-5">{patient.primaryInsurance?.carrier}</p>
+                          <p className="text-sm text-text-secondary leading-5">{patient.primaryInsurance?.plan}</p>
+                        </div>
+                        <div>
+                          <p className="text-[11px] font-medium text-text-tertiary uppercase tracking-wide mb-2">Policy Info</p>
+                          <div className="space-y-1">
+                            <div className="flex justify-between text-sm leading-5">
+                              <span className="text-text-secondary">Member ID</span>
+                              <span className="text-text-primary">{patient.primaryInsurance?.memberId}</span>
+                            </div>
+                            <div className="flex justify-between text-sm leading-5">
+                              <span className="text-text-secondary">Effective Date</span>
+                              <span className="text-text-primary">{patient.primaryInsurance?.effectiveDate ? formatDate(patient.primaryInsurance.effectiveDate) : '—'}</span>
+                            </div>
+                            <div className="flex justify-between text-sm leading-5 items-center">
+                              <span className="text-text-secondary">Status</span>
+                              <Badge variant="default" className="bg-bg-success-primary text-text-success-primary text-xs h-5">Active</Badge>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      {patient.secondaryInsurance && (
+                        <>
+                          <div className="border-t border-border-secondary my-4" />
+                          <div className="space-y-4">
+                            <div>
+                              <p className="text-[11px] font-medium text-text-tertiary uppercase tracking-wide mb-1">Secondary</p>
+                              <p className="text-sm font-medium text-text-primary leading-5">{patient.secondaryInsurance.carrier}</p>
+                              <p className="text-sm text-text-secondary leading-5">{patient.secondaryInsurance.plan}</p>
+                            </div>
+                            <div>
+                              <p className="text-[11px] font-medium text-text-tertiary uppercase tracking-wide mb-2">Policy Info</p>
+                              <div className="space-y-1">
+                                <div className="flex justify-between text-sm leading-5">
+                                  <span className="text-text-secondary">Member ID</span>
+                                  <span className="text-text-primary">{patient.secondaryInsurance.memberId}</span>
+                                </div>
+                                <div className="flex justify-between text-sm leading-5">
+                                  <span className="text-text-secondary">Effective Date</span>
+                                  <span className="text-text-primary">{patient.secondaryInsurance.effectiveDate ? formatDate(patient.secondaryInsurance.effectiveDate) : '—'}</span>
+                                </div>
+                                <div className="flex justify-between text-sm leading-5 items-center">
+                                  <span className="text-text-secondary">Status</span>
+                                  <Badge variant="default" className="bg-bg-success-primary text-text-success-primary text-xs h-5">Active</Badge>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+              {/* Data Section */}
+              <div>
+                <button
+                  onClick={() => toggleSection('data')}
+                  className="flex items-center justify-between px-4 h-[40px] w-full hover:bg-bg-secondary/50 transition-colors"
+                >
+                  <span className="text-base font-medium lasso:wght-medium leading-6 text-text-primary">Data</span>
+                  <CaretDown className={cn("size-4 text-text-tertiary transition-transform duration-200", !expandedSections.data && "-rotate-90")} />
+                </button>
+                <div className={cn("grid transition-[grid-template-rows] duration-300 ease-in-out", expandedSections.data ? "grid-rows-[1fr]" : "grid-rows-[0fr]")}>
+                  <div className="overflow-hidden">
+                    <div className="px-4 pb-4 space-y-4">
+                      <div>
+                        <p className="text-[11px] font-medium text-text-tertiary uppercase tracking-wide mb-1">Source</p>
+                        <p className="text-sm text-text-primary leading-5">{patient.syncStatus.ehrSystem}</p>
+                      </div>
+                      <div>
+                        <p className="text-[11px] font-medium text-text-tertiary uppercase tracking-wide mb-1">Last Sync</p>
+                        <p className="text-sm text-text-primary leading-5">Today, 4:30 PM</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
 
       {/* Full-page document viewer */}
       {viewingFullDoc && (

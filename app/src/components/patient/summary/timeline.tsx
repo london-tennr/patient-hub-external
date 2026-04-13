@@ -158,7 +158,7 @@ export function Timeline({ activities, onSelectActivity, className, filterBy = '
   return (
     <div className={cn('bg-bg-white border border-border-tertiary rounded-md shadow-xs overflow-hidden flex flex-col', className)}>
       {/* Filters Row */}
-      <div className="flex items-center gap-2 px-2 py-2 bg-bg-white overflow-x-auto border-b border-border-tertiary">
+      <div className="flex items-center gap-2 px-2 py-2 bg-bg-white overflow-x-auto border-b border-border-tertiary shrink-0">
         <div className="flex items-center">
           <div className="flex items-center border border-border-secondary bg-bg-secondary px-2.5 py-1 rounded-l-full">
             <span className="text-sm text-text-tertiary font-medium">{filterLabel}</span>
@@ -250,21 +250,19 @@ export function Timeline({ activities, onSelectActivity, className, filterBy = '
                 !isLast && 'border-b border-border',
               )}
             >
-              <div className="flex flex-col gap-0 min-w-0 w-full">
-                <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-1.5 min-w-0">
-                    <span className="text-[13px] font-medium lasso:wght-medium text-text-primary truncate">{activity.title}</span>
-                    {getActivitySourceLabel(activity) && (
-                      <span className="text-[10px] text-text-tertiary shrink-0 border border-border-secondary bg-bg-secondary px-1.5 py-0.5 rounded-full">{getActivitySourceLabel(activity)}</span>
-                    )}
-                  </div>
-                  <span className="text-[11px] text-text-tertiary whitespace-nowrap shrink-0">
-                    {formatActivityDate(activity.timestamp)} · {formatActivityTime(activity.timestamp)}
-                  </span>
+              <div className="flex flex-col gap-0.5 min-w-0 w-full">
+                <div className="flex items-center gap-1.5 min-w-0 flex-wrap">
+                  <span className="text-[13px] font-medium lasso:wght-medium text-text-primary">{activity.title}</span>
+                  {getActivitySourceLabel(activity) && (
+                    <span className="text-[10px] text-text-tertiary shrink-0 border border-border-secondary bg-bg-secondary px-1.5 py-0.5 rounded-full">{getActivitySourceLabel(activity)}</span>
+                  )}
                 </div>
                 {activity.description && (
-                  <span className="text-[11px] text-text-secondary truncate">{activity.description}</span>
+                  <span className="text-[11px] text-text-secondary">{activity.description}</span>
                 )}
+                <span className="text-[11px] text-text-tertiary">
+                  {formatActivityDate(activity.timestamp)} · {formatActivityTime(activity.timestamp)}
+                </span>
               </div>
             </div>
           );
@@ -272,8 +270,8 @@ export function Timeline({ activities, onSelectActivity, className, filterBy = '
       </div>
 
       {/* Footer with pagination */}
-      <div className="flex items-center justify-between px-4 py-3 border-t border-border">
-        <p className="text-sm text-text-secondary">
+      <div className="flex items-center justify-between px-3 py-2 md:px-4 md:py-3 border-t border-border">
+        <p className="hidden sm:block text-sm text-text-secondary">
           Showing {filteredActivities.length === 0 ? 0 : page * ITEMS_PER_PAGE + 1}-{Math.min((page + 1) * ITEMS_PER_PAGE, filteredActivities.length)} of{' '}
           {filteredActivities.length} results
         </p>
@@ -288,26 +286,28 @@ export function Timeline({ activities, onSelectActivity, className, filterBy = '
               Previous
             </button>
 
-            {getVisiblePages(page, totalPages).map((p, i) =>
-              p === 'ellipsis' ? (
-                <span key={`ellipsis-${i}`} className="flex items-center justify-center size-8 text-sm text-text-secondary">
-                  &middot;&middot;&middot;
-                </span>
-              ) : (
-                <button
-                  key={p}
-                  onClick={() => setPage(p)}
-                  className={cn(
-                    'flex items-center justify-center size-8 text-sm rounded-md transition-colors cursor-pointer',
-                    p === page
-                      ? 'border border-border-primary text-text-primary font-medium'
-                      : 'text-text-secondary hover:text-text-primary'
-                  )}
-                >
-                  {p + 1}
-                </button>
-              )
-            )}
+            <div className="hidden sm:flex items-center gap-1">
+              {getVisiblePages(page, totalPages).map((p, i) =>
+                p === 'ellipsis' ? (
+                  <span key={`ellipsis-${i}`} className="flex items-center justify-center size-8 text-sm text-text-secondary">
+                    &middot;&middot;&middot;
+                  </span>
+                ) : (
+                  <button
+                    key={p}
+                    onClick={() => setPage(p)}
+                    className={cn(
+                      'flex items-center justify-center size-8 text-sm rounded-md transition-colors cursor-pointer',
+                      p === page
+                        ? 'border border-border-primary text-text-primary font-medium'
+                        : 'text-text-secondary hover:text-text-primary'
+                    )}
+                  >
+                    {p + 1}
+                  </button>
+                )
+              )}
+            </div>
 
             <button
               onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}

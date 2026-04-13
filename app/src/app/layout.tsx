@@ -6,8 +6,8 @@ import { AppShell } from '@/components/shell/app-shell';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'Patient EHR Admin',
-  description: 'Tennr Patient EHR Admin Tool',
+  title: 'Patient Hub',
+  description: 'Tennr Patient Hub',
 };
 
 const featureDisplayFont = localFont({

@@ -28,6 +28,7 @@ import {
   Faders,
   Robot,
   UsersThree,
+  X,
 } from '@phosphor-icons/react';
 import { cn } from '@tennr/lasso/utils/cn';
 import { Avatar, AvatarImage, AvatarFallback } from '@tennr/lasso/avatar';
@@ -36,6 +37,8 @@ import { UserMenuPopover } from './user-menu-popover';
 interface SidebarProps {
   collapsed?: boolean;
   onCollapsedChange?: (collapsed: boolean) => void;
+  isMobileOpen?: boolean;
+  onMobileClose?: () => void;
 }
 
 interface NavItem {
@@ -51,7 +54,7 @@ interface NavGroup {
   items: NavItem[];
 }
 
-export function Sidebar({ collapsed = false, onCollapsedChange }: SidebarProps) {
+export function Sidebar({ collapsed = false, onCollapsedChange, isMobileOpen = false, onMobileClose }: SidebarProps) {
   const pathname = usePathname();
   const [isUserMenuOpen, setIsUserMenuOpen] = React.useState(false);
   const userButtonRef = React.useRef<HTMLButtonElement>(null);
@@ -148,7 +151,18 @@ export function Sidebar({ collapsed = false, onCollapsedChange }: SidebarProps) 
             </div>
           )}
         </div>
-        {!collapsed && (
+        {/* Mobile close button */}
+        {isMobileOpen && onMobileClose && (
+          <button
+            onClick={onMobileClose}
+            className="p-2 rounded-full hover:bg-[var(--neutral-4)] transition-colors"
+            aria-label="Close menu"
+          >
+            <X className="w-4 h-4 text-[var(--neutral-11)]" />
+          </button>
+        )}
+        {/* Desktop collapse button */}
+        {!collapsed && !isMobileOpen && (
           <button
             onClick={() => onCollapsedChange?.(!collapsed)}
             className="p-2 rounded-full hover:bg-[var(--neutral-4)] transition-colors"
@@ -218,6 +232,7 @@ export function Sidebar({ collapsed = false, onCollapsedChange }: SidebarProps) 
                       className={cn(
                         'flex items-center gap-2.5 rounded-md text-sm font-normal transition-colors cursor-default',
                         collapsed ? 'justify-center p-2' : 'px-2 py-1.5',
+                        'min-h-[44px] md:min-h-0',
                         'text-[var(--neutral-11)]'
                       )}
                       title={collapsed ? item.label : undefined}
@@ -239,9 +254,11 @@ export function Sidebar({ collapsed = false, onCollapsedChange }: SidebarProps) 
                   <Link
                     key={item.label}
                     href={item.href}
+                    onClick={() => onMobileClose?.()}
                     className={cn(
                       'flex items-center gap-2.5 rounded-md text-sm font-normal transition-colors',
                       collapsed ? 'justify-center p-2' : 'px-2 py-1.5',
+                      'min-h-[44px] md:min-h-0',
                       isActive
                         ? 'bg-[var(--neutral-5)] text-[var(--neutral-12)] font-medium'
                         : 'text-[var(--neutral-11)] hover:bg-[var(--neutral-4)] hover:text-[var(--neutral-12)]'

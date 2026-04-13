@@ -34,13 +34,13 @@ export function VerificationHistory({ history }: VerificationHistoryProps) {
         {history.length === 0 ? (
           <p className="text-sm text-text-secondary">No verification attempts</p>
         ) : (
-          <Table>
+          <Table className="w-full">
             <TableHeader>
               <TableRow>
                 <TableHead>Date</TableHead>
                 <TableHead>Result</TableHead>
                 <TableHead>Run By</TableHead>
-                <TableHead>Notes</TableHead>
+                <TableHead className="hidden md:table-cell">Notes</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -53,7 +53,7 @@ export function VerificationHistory({ history }: VerificationHistoryProps) {
                     </Badge>
                   </TableCell>
                   <TableCell>{attempt.runBy}</TableCell>
-                  <TableCell className="text-text-secondary">{attempt.notes || '—'}</TableCell>
+                  <TableCell className="text-text-secondary hidden md:table-cell">{attempt.notes || '—'}</TableCell>
                 </TableRow>
               ))}
             </TableBody>

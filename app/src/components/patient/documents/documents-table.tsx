@@ -86,7 +86,7 @@ export function DocumentsTable({ documents, onView }: DocumentsTableProps) {
       {filteredDocs.length === 0 ? (
         <div className="text-center py-12 text-muted-foreground">No documents found</div>
       ) : (
-        <Table>
+        <Table className="w-full">
           <TableHeader>
             <TableRow>
               <TableHead>
@@ -101,34 +101,34 @@ export function DocumentsTable({ documents, onView }: DocumentsTableProps) {
                   <CaretUpDown className="w-4 h-4 ml-1" />
                 </Button>
               </TableHead>
-              <TableHead>Order</TableHead>
+              <TableHead className="hidden md:table-cell">Order</TableHead>
               <TableHead>
                 <Button variant="ghost" size="sm" onClick={() => handleSort('dateAdded')}>
                   Date Added
                   <CaretUpDown className="w-4 h-4 ml-1" />
                 </Button>
               </TableHead>
-              <TableHead>Source</TableHead>
-              <TableHead className="w-[100px]">Actions</TableHead>
+              <TableHead className="hidden md:table-cell">Source</TableHead>
+              <TableHead className="w-[100px] hidden md:table-cell">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {filteredDocs.map(doc => (
               <TableRow key={doc.id}>
-                <TableCell className="font-medium">{doc.name}</TableCell>
+                <TableCell className="font-medium break-words">{doc.name}</TableCell>
                 <TableCell>
                   <Badge variant="outline">{typeLabels[doc.type] || doc.type}</Badge>
                 </TableCell>
-                <TableCell className="text-muted-foreground">{doc.orderId || '—'}</TableCell>
+                <TableCell className="text-muted-foreground hidden md:table-cell">{doc.orderId || '—'}</TableCell>
                 <TableCell className="text-muted-foreground">
                   {new Date(doc.dateAdded).toLocaleDateString()}
                 </TableCell>
-                <TableCell>
+                <TableCell className="hidden md:table-cell">
                   <Badge variant={doc.source === 'tennr' ? 'default' : 'secondary'}>
                     {doc.source === 'tennr' ? 'Tennr' : 'EHR'}
                   </Badge>
                 </TableCell>
-                <TableCell>
+                <TableCell className="hidden md:table-cell">
                   <div className="flex gap-1">
                     <Button variant="ghost" size="sm" onClick={() => onView(doc)}>
                       <Eye className="w-4 h-4" />

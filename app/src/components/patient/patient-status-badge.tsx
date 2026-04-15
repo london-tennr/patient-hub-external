@@ -9,7 +9,7 @@ import type { PatientStatus, PatientStage } from '@/types/patient';
 const stageLabels: Record<PatientStage, string> = {
   referral_received: 'Referral Received',
   intake_review: 'Intake Review',
-  insurance_verification: 'Payer Verification',
+  insurance_verification: 'Insurance Verification',
   prior_authorization: 'Prior Authorization',
   scheduling: 'Scheduling',
   ready_for_claim: 'Ready for Claim',
@@ -154,6 +154,7 @@ export function PatientStatusBadge({ status, stage, onOpenWorkflow, disablePopov
             onMouseEnter={() => setOpen(true)}
             onMouseLeave={() => setOpen(false)}
             onClick={(e) => e.stopPropagation()}
+            suppressHydrationWarning
           >
             {badge}
           </button>
@@ -194,6 +195,7 @@ export function PatientStatusBadge({ status, stage, onOpenWorkflow, disablePopov
             onMouseEnter={() => setOpen(true)}
             onMouseLeave={() => setOpen(false)}
             onClick={(e) => e.stopPropagation()}
+            suppressHydrationWarning
           >
             {actionBadge}
           </button>
@@ -255,6 +257,7 @@ export function PatientStatusBadge({ status, stage, onOpenWorkflow, disablePopov
             onMouseEnter={() => setOpen(true)}
             onMouseLeave={() => setOpen(false)}
             onClick={(e) => e.stopPropagation()}
+            suppressHydrationWarning
           >
             {grayBadge}
           </button>

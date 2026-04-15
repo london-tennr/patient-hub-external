@@ -129,13 +129,13 @@ function VerifyInsuranceContent({ patient }: { patient: Patient }) {
               </div>
             )}
 
-            <SubSectionHeader title="Payer" open={payerOpen} onToggle={() => setPayerOpen(!payerOpen)} />
+            <SubSectionHeader title="Insurance" open={payerOpen} onToggle={() => setPayerOpen(!payerOpen)} />
             {payerOpen && (
               <div className="px-4 py-3 border-t border-border-tertiary">
                 <InfoGrid>
-                  <InfoRow label="Payer Name" value="Aetna" />
-                  <InfoRow label="Payer ID" value="60054" />
-                  <InfoRow label="Payer Address" value={<span>151 Farmington Ave<br />Hartford, CT 06156</span>} />
+                  <InfoRow label="Insurance Name" value="Aetna" />
+                  <InfoRow label="Insurance ID" value="60054" />
+                  <InfoRow label="Insurance Address" value={<span>151 Farmington Ave<br />Hartford, CT 06156</span>} />
                   <InfoRow label="Service Type" value="DME" />
                 </InfoGrid>
               </div>
@@ -150,7 +150,7 @@ function VerifyInsuranceContent({ patient }: { patient: Patient }) {
                   <InfoRow label="Group Number" value={groupNumber} />
                   <InfoRow label="Eligibility Start Date" value="—" />
                 </InfoGrid>
-                <p className="text-[11px] text-text-tertiary mt-3">No plan information returned. Verify member ID and payer details.</p>
+                <p className="text-[11px] text-text-tertiary mt-3">No plan information returned. Verify member ID and insurance details.</p>
               </div>
             )}
           </>
@@ -455,7 +455,7 @@ interface WorkflowSheetProps {
 }
 
 const actionTitles: Record<string, string> = {
-  'action-1': 'Verify Payer Details',
+  'action-1': 'Verify Insurance Details',
   'action-2': 'Multi-Patient Split',
   'action-3': 'Validate Document Information',
 };
@@ -486,7 +486,7 @@ export function WorkflowSheet({ patient, open, onOpenChange, actionId }: Workflo
   };
 
   const bottomButtonLabel: Record<string, string> = {
-    'action-1': 'Confirm payer details',
+    'action-1': 'Confirm insurance details',
     'action-2': 'Confirm patient split',
     'action-3': 'Approve all documents',
   };
@@ -630,7 +630,7 @@ export function WorkflowSheet({ patient, open, onOpenChange, actionId }: Workflo
               </div>
             </div>
 
-            {/* Payer card */}
+            {/* Insurance card */}
             <div className="px-4 md:px-5 py-4 space-y-3 border-b border-border-tertiary">
               <div className="border border-border-tertiary rounded-md overflow-hidden">
                 <div className="flex items-center justify-between px-4 py-2.5 border-b border-border-tertiary">
@@ -680,11 +680,11 @@ export function WorkflowSheet({ patient, open, onOpenChange, actionId }: Workflo
               <div className="flex items-center gap-4">
                 <button className="flex items-center gap-1.5 text-[11px] text-text-secondary hover:text-text-primary transition-colors cursor-pointer">
                   <Plus weight="bold" className="size-3" />
-                  Add Payer
+                  Add Insurance
                 </button>
                 <button className="flex items-center gap-1.5 text-[11px] text-text-secondary hover:text-text-primary transition-colors cursor-pointer">
                   <ListBullets weight="regular" className="size-3" />
-                  Re-order Payers
+                  Re-order Insurance
                 </button>
               </div>
             </div>

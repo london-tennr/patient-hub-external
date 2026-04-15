@@ -71,7 +71,7 @@ export function OrderCard({ order, onSelect }: { order: Order; onSelect: (order:
 const orderStages: { key: OrderStage | 'referral' | 'order_created'; label: string }[] = [
   { key: 'referral', label: 'Referral Received' },
   { key: 'order_created', label: 'Order Created' },
-  { key: 'validation', label: 'Payer Verified' },
+  { key: 'validation', label: 'Insurance Verified' },
   { key: 'eligibility', label: 'Eligibility & Benefits' },
   { key: 'qualification', label: 'Order Qualification' },
   { key: 'complete', label: 'Completed' },
@@ -94,7 +94,7 @@ interface StageNote {
 
 const stageNotes: Partial<Record<OrderStage, StageNote>> = {
   qualification: { message: 'Additional documentation may be required', actionLabel: 'Provide' },
-  eligibility: { message: 'Awaiting carrier response for benefits', actionLabel: 'Follow Up' },
+  eligibility: { message: 'Awaiting payer response for benefits', actionLabel: 'Follow Up' },
 };
 
 export function OrderProgressStepper({ order }: { order: Order }) {

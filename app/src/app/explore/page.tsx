@@ -5,69 +5,15 @@ import { useRouter } from 'next/navigation';
 import { MagnifyingGlass, SquareHalf, FunnelSimple, X } from '@phosphor-icons/react';
 import { DataTableViewOptions } from '@tennr/lasso/data-table';
 import { FilterGroup, type FilterCategoryType, type FilterState } from '@tennr/lasso/filter-group';
-import { usePatientsTable, PatientsTableContent, type OnFilterBy } from '@/components/patient/patients-table';
-import { STATUS_CATEGORY_MAP, type StatusCategory } from '@/components/patient/patient-status-bar';
+import { usePatientsTable, PatientsTableContent, PatientsTablePagination, type OnFilterBy } from '@/components/patient/patients-table';
 import { WorkflowSheet } from '@/components/patient/workflow-sheet';
 import { mockPatients } from '@/data/mock-patients';
-import type { Patient, PatientStatus } from '@/types/patient';
-import { cn } from '@tennr/lasso/utils/cn';
+import type { Patient } from '@/types/patient';
 
-const tabConfigs: { id: StatusCategory; label: string; badge: string; icon: string; iconEl: React.ReactNode }[] = [
-  {
-    id: 'action_required',
-    label: 'Action Required',
-    badge: 'bg-amber-100 text-amber-700',
-    icon: 'text-amber-500',
-    iconEl: (
-      <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
-      </svg>
-    ),
-  },
-  {
-    id: 'on_track',
-    label: 'Processing',
-    badge: 'bg-blue-100 text-blue-700',
-    icon: 'text-blue-500',
-    iconEl: (
-      <svg className="w-3 h-3 animate-spin" viewBox="0 0 24 24" fill="none">
-        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3"/>
-        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"/>
-      </svg>
-    ),
-  },
-  {
-    id: 'blocked',
-    label: 'Blocked',
-    badge: 'bg-red-100 text-red-700',
-    icon: 'text-red-500',
-    iconEl: (
-      <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-        <circle cx="12" cy="12" r="10"/>
-        <line x1="12" y1="8" x2="12" y2="12" strokeLinecap="round"/>
-        <line x1="12" y1="16" x2="12.01" y2="16" strokeLinecap="round"/>
-      </svg>
-    ),
-  },
-];
 
 // Filter categories for the patients table
 const patientFilterCategories: FilterCategoryType[] = [
-  {
-    id: 'status',
-    label: 'Status',
-    variant: 'command',
-    childVariant: 'checkbox',
-    values: [
-      { id: 'on_track', label: 'On Track' },
-      { id: 'missing_info', label: 'Missing Info' },
-      { id: 'needs_attention', label: 'Action Required' },
-      { id: 'blocked', label: 'Blocked' },
-      { id: 'completed', label: 'Completed' },
-      { id: 'inactive', label: 'Inactive' },
-    ],
-  },
-  {
+{
     id: 'priority',
     label: 'Priority',
     variant: 'command',
@@ -92,7 +38,7 @@ const patientFilterCategories: FilterCategoryType[] = [
     values: [
       { id: 'referral_received', label: 'Referral Received' },
       { id: 'intake_review', label: 'Intake Review' },
-      { id: 'insurance_verification', label: 'Payer Verification' },
+      { id: 'insurance_verification', label: 'Insurance Verification' },
       { id: 'prior_authorization', label: 'Prior Authorization' },
       { id: 'scheduling', label: 'Scheduling' },
       { id: 'ready_for_claim', label: 'Ready for Claim' },
@@ -141,33 +87,11 @@ export default function ExploreMvpPage() {
   const [searchValue, setSearchValue] = useState('');
   const [filterState, setFilterState] = useState<FilterState>([]);
   const [isFilterRowVisible, setIsFilterRowVisible] = useState(false);
-  const [activeCategory, setActiveCategory] = useState<StatusCategory | null>(null);
   const [workflowPatient, setWorkflowPatient] = useState<Patient | null>(null);
   const [workflowActionId, setWorkflowActionId] = useState<string | null>(null);
 
-  const statusCounts = useMemo(() => {
-    const counts: Record<PatientStatus, number> = {
-      on_track: 0,
-      missing_info: 0,
-      needs_attention: 0,
-      blocked: 0,
-      completed: 0,
-      inactive: 0,
-    };
-    for (const patient of mockPatients) {
-      counts[patient.status]++;
-    }
-    return counts;
-  }, []);
-
   const filteredPatients = useMemo(() => {
     let result = mockPatients;
-
-    // Apply category filter
-    if (activeCategory) {
-      const allowedStatuses = STATUS_CATEGORY_MAP[activeCategory];
-      result = result.filter((patient) => allowedStatuses.includes(patient.status));
-    }
 
     // Apply search filter across all fields
     if (searchValue.trim()) {
@@ -190,11 +114,6 @@ export default function ExploreMvpPage() {
       const val = filterInstance.value;
 
       switch (filterInstance.filterId) {
-        case 'status':
-          if (Array.isArray(val) && val.length > 0) {
-            result = result.filter((p) => (val as string[]).includes(p.status));
-          }
-          break;
         case 'priority':
           if (Array.isArray(val) && val.length > 0) {
             result = result.filter((p) => (val as string[]).includes(p.priority));
@@ -235,7 +154,7 @@ export default function ExploreMvpPage() {
     }
 
     return result;
-  }, [searchValue, filterState, activeCategory]);
+  }, [searchValue, filterState]);
 
   // Checkbox-style filters use arrays; clicking a cell value toggles it in the filter
   const handleFilterBy = useCallback<OnFilterBy>((filterId, value) => {
@@ -244,7 +163,7 @@ export default function ExploreMvpPage() {
       const existing = prev.find((f) => f.filterId === filterId);
 
       // For filters that use checkbox (array) values
-      const checkboxFilters = ['status', 'priority', 'stage', 'tennrStatus'];
+      const checkboxFilters = ['priority', 'stage', 'tennrStatus'];
       if (checkboxFilters.includes(filterId)) {
         if (existing && Array.isArray(existing.value)) {
           const arr = existing.value as string[];
@@ -295,55 +214,13 @@ export default function ExploreMvpPage() {
         {/* Page Title */}
         <div className="flex flex-col gap-1">
           <h1 className="font-display font-light text-5xl text-foreground">Patient Hub</h1>
-          <p className="text-sm text-text-secondary">
-            Total <span className="font-semibold text-text-primary">{mockPatients.length} patients</span>
-          </p>
         </div>
 
-        {/* Status Filter Tabs */}
+        {/* Table */}
         <div className="flex flex-col gap-4">
-          <div className="flex items-center gap-0 border-b border-border-secondary">
-            {/* All tab */}
-            <button
-              onClick={() => setActiveCategory(null)}
-              className={cn(
-                'relative px-3 py-2 text-sm transition-colors cursor-pointer',
-                'after:absolute after:bottom-[-1px] after:left-0 after:right-0 after:h-[2px] after:rounded-full',
-                activeCategory === null
-                  ? 'text-foreground font-medium after:bg-brand-terracotta'
-                  : 'text-muted-foreground font-normal hover:text-foreground after:bg-transparent'
-              )}
-            >
-              Patients ({mockPatients.length})
-            </button>
-
-            {tabConfigs.map((cat) => {
-              const count = STATUS_CATEGORY_MAP[cat.id].reduce(
-                (sum, s) => sum + statusCounts[s],
-                0
-              );
-              const isActive = activeCategory === cat.id;
-
-              return (
-                <button
-                  key={cat.id}
-                  onClick={() => setActiveCategory(isActive ? null : cat.id)}
-                  className={cn(
-                    'relative px-3 py-2 text-sm transition-colors cursor-pointer',
-                    'after:absolute after:bottom-[-1px] after:left-0 after:right-0 after:h-[2px] after:rounded-full',
-                    isActive
-                      ? 'text-foreground font-medium after:bg-brand-terracotta'
-                      : 'text-muted-foreground font-normal hover:text-foreground after:bg-transparent'
-                  )}
-                >
-                  {cat.label} ({count})
-                </button>
-              );
-            })}
-          </div>
-
           {/* Table Container */}
-          <div className="flex flex-col w-full border border-border-secondary rounded-md overflow-hidden bg-white shadow-xs">
+          <div className="flex flex-col w-full">
+          <div className="border border-border-secondary rounded-md overflow-hidden bg-white shadow-xs">
             {/* Index Filter Top Bar */}
             <div className="flex flex-col w-full border-b border-border">
               <div className="flex items-center w-full p-2 gap-4 bg-white">
@@ -387,8 +264,13 @@ export default function ExploreMvpPage() {
               )}
             </div>
 
-            {/* Patients Table */}
-            <PatientsTableContent table={table} onPatientClick={handlePatientClick} />
+
+              {/* Patients Table */}
+              <PatientsTableContent table={table} onPatientClick={handlePatientClick} />
+            </div>
+
+            {/* Pagination (outside card) */}
+            <PatientsTablePagination table={table} />
           </div>
         </div>
       </div>

@@ -17,7 +17,7 @@ const statusBadgeConfig: Record<OrderStatus, { label: string; variant: 'success'
 
 const stages: { id: OrderStage; label: string }[] = [
   { id: 'validation', label: 'Patient Intake' },
-  { id: 'eligibility', label: 'Payer Verified' },
+  { id: 'eligibility', label: 'Insurance Verified' },
   { id: 'qualification', label: 'Resupply Confirmed' },
   { id: 'complete', label: 'Ready for Shipment' },
 ];
@@ -87,14 +87,14 @@ export function OrderDetailCard({ orders }: OrderDetailCardProps) {
 
   return (
     <div className="bg-bg-white border border-border-tertiary rounded-md shadow-xs overflow-hidden">
-      {/* Status + Payer Row */}
+      {/* Status + Insurance Row */}
       <div className="flex items-start gap-8 px-4 pt-4 pb-3">
         <div className="flex flex-col gap-1">
           <span className="text-xs font-medium text-text-tertiary uppercase tracking-wide">Order Status</span>
           <Badge variant={statusConfig.variant}>{statusConfig.label}</Badge>
         </div>
         <div className="flex flex-col gap-1">
-          <span className="text-xs font-medium text-text-tertiary uppercase tracking-wide">Payer</span>
+          <span className="text-xs font-medium text-text-tertiary uppercase tracking-wide">Insurance</span>
           <span className="text-sm text-text-secondary">—</span>
         </div>
       </div>

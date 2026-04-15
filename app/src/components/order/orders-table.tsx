@@ -13,9 +13,18 @@ import {
   type PaginationState,
   type SortingState,
 } from '@tanstack/react-table';
-import { CaretLeft, CaretRight, CaretUp, CaretDown, Archive } from '@phosphor-icons/react';
+import { CaretUp, CaretDown, Archive } from '@phosphor-icons/react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@tennr/lasso/table';
 import { Badge } from '@tennr/lasso/badge';
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationPrevious,
+  PaginationNext,
+  PaginationEllipsis,
+} from '@tennr/lasso/pagination';
 import { cn } from '@tennr/lasso/utils/cn';
 import type { Order, OrderStatus } from '@/types/order';
 
@@ -60,6 +69,7 @@ function createColumns() {
     columnHelper.accessor('status', {
       id: 'status',
       header: 'Status',
+      enableSorting: false,
       cell: (info) => {
         const config = statusConfig[info.getValue()];
         return <Badge variant={config.variant}>{config.label}</Badge>;
@@ -192,6 +202,10 @@ export function OrdersTableContent({ table, onOrderClick }: OrdersTableContentPr
 
   const pageCount = table.getPageCount();
   const currentPage = table.getState().pagination.pageIndex;
+  const pageSize = table.getState().pagination.pageSize;
+  const totalRows = table.getFilteredRowModel().rows.length;
+  const startRow = currentPage * pageSize + 1;
+  const endRow = Math.min((currentPage + 1) * pageSize, totalRows);
 
   return (
     <>
@@ -264,51 +278,42 @@ export function OrdersTableContent({ table, onOrderClick }: OrdersTableContentPr
       </Table>
 
       {pageCount > 1 && (
-        <div className="flex items-center justify-between px-4 py-3 border-t border-border">
-          <p className="text-sm text-text-secondary">
-            Showing {currentPage * 10 + 1}-{Math.min((currentPage + 1) * 10, table.getRowCount())} of{' '}
-            {table.getRowCount()} results
-          </p>
-          <div className="flex items-center gap-1">
-            <button
-              onClick={() => table.previousPage()}
-              disabled={!table.getCanPreviousPage()}
-              className="flex items-center gap-1 px-2 py-1 text-sm text-text-secondary hover:text-text-primary disabled:opacity-40 disabled:pointer-events-none transition-colors cursor-pointer"
-            >
-              <CaretLeft weight="regular" className="size-3.5" />
-              Previous
-            </button>
-
-            {getVisiblePages(currentPage, pageCount).map((page, i) =>
-              page === 'ellipsis' ? (
-                <span key={`ellipsis-${i}`} className="flex items-center justify-center size-8 text-sm text-text-secondary">
-                  &middot;&middot;&middot;
-                </span>
-              ) : (
-                <button
-                  key={page}
-                  onClick={() => table.setPageIndex(page)}
-                  className={cn(
-                    'flex items-center justify-center size-8 text-sm rounded-md transition-colors cursor-pointer',
-                    page === currentPage
-                      ? 'border border-border-primary text-text-primary font-medium'
-                      : 'text-text-secondary hover:text-text-primary'
-                  )}
-                >
-                  {page + 1}
-                </button>
-              )
-            )}
-
-            <button
-              onClick={() => table.nextPage()}
-              disabled={!table.getCanNextPage()}
-              className="flex items-center gap-1 px-2 py-1 text-sm text-text-secondary hover:text-text-primary disabled:opacity-40 disabled:pointer-events-none transition-colors cursor-pointer"
-            >
-              Next
-              <CaretRight weight="regular" className="size-3.5" />
-            </button>
-          </div>
+        <div className="flex items-center justify-between pt-4">
+          <span className="text-sm text-text-secondary">
+            Showing {startRow}-{endRow} of {totalRows} results
+          </span>
+          <Pagination className="w-auto mx-0">
+            <PaginationContent>
+              <PaginationItem>
+                <PaginationPrevious
+                  onClick={() => table.previousPage()}
+                  className={cn(!table.getCanPreviousPage() && 'pointer-events-none opacity-40')}
+                />
+              </PaginationItem>
+              {getVisiblePages(currentPage, pageCount).map((page, i) =>
+                page === 'ellipsis' ? (
+                  <PaginationItem key={`ellipsis-${i}`}>
+                    <PaginationEllipsis />
+                  </PaginationItem>
+                ) : (
+                  <PaginationItem key={page}>
+                    <PaginationLink
+                      isActive={page === currentPage}
+                      onClick={() => table.setPageIndex(page)}
+                    >
+                      {page + 1}
+                    </PaginationLink>
+                  </PaginationItem>
+                )
+              )}
+              <PaginationItem>
+                <PaginationNext
+                  onClick={() => table.nextPage()}
+                  className={cn(!table.getCanNextPage() && 'pointer-events-none opacity-40')}
+                />
+              </PaginationItem>
+            </PaginationContent>
+          </Pagination>
         </div>
       )}
     </>

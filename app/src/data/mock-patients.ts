@@ -325,7 +325,7 @@ const activityTypes = ['Order created', 'Order updated', 'Patient created', 'Pat
 
 const updateOrderMetadata = [
   'Status changed to In Progress',
-  'Payer verified',
+  'Insurance verified',
   'Documents uploaded',
   'Prior auth submitted',
   'Shipping address updated',
@@ -334,7 +334,7 @@ const updateOrderMetadata = [
 
 const updatePatientMetadata = [
   'Demographics updated',
-  'Payer info updated',
+  'Insurance info updated',
   'Phone number changed',
   'Address updated',
   'Primary care provider updated',
@@ -377,10 +377,10 @@ function generateActivityEntry(referralDate: string, dayOffset: number): { title
   let title: string = type;
   let metadata: string | undefined;
   if (type === 'Order created') {
-    title = `${orderId} created`;
+    title = 'Order created';
     metadata = orderType;
   } else if (type === 'Order updated') {
-    title = `${orderId} updated`;
+    title = 'Order updated';
     metadata = updateOrderMetadata[Math.floor(rand() * updateOrderMetadata.length)];
   } else if (type === 'Patient updated') {
     metadata = updatePatientMetadata[Math.floor(rand() * updatePatientMetadata.length)];
@@ -509,7 +509,7 @@ function generatePatients(count: number): Patient[] {
       patients[i].runningStages = undefined;
       patients[i].actionCount = 1;
       patients[i].actionItems = [
-        { id: 'action-1', label: 'Verify payer details', description: 'Member ID appears invalid for Aetna' },
+        { id: 'action-1', label: 'Verify insurance details', description: 'Member ID appears invalid for Aetna' },
       ];
       patients[i].lastActivity = generateLastActivity('missing_info', patients[i].referralDate);
       rebuildStageCompletedAt(patients[i]);

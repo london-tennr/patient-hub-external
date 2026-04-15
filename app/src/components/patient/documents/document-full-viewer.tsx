@@ -223,7 +223,7 @@ export function DocumentFullViewer({
             <ArrowClockwise weight="regular" className="size-[18px] text-text-primary" />
           </button>
           <button
-            className="flex items-center justify-center size-9 rounded-md border border-border-secondary bg-white hover:bg-bg-secondary transition-colors cursor-pointer"
+            className="flex items-center justify-center size-9 rounded-md hover:bg-bg-secondary transition-colors cursor-pointer"
             aria-label="Download"
           >
             <DownloadSimple weight="regular" className="size-[18px] text-text-primary" />

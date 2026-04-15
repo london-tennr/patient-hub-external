@@ -13,7 +13,7 @@ interface AiSummaryCardProps {
 const stageLabels: Record<PatientStage, string> = {
   referral_received: 'Referral Received',
   intake_review: 'Intake Review',
-  insurance_verification: 'Payer Verification',
+  insurance_verification: 'Insurance Verification',
   prior_authorization: 'Prior Authorization',
   scheduling: 'Scheduling',
   ready_for_claim: 'Ready for Claim',

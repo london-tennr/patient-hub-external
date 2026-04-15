@@ -37,7 +37,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" data-theme="lasso" className="h-full overflow-hidden">
+    <html lang="en" data-theme="lasso" className="h-full overflow-hidden" suppressHydrationWarning>
       <body
         className={`${featureDisplayFont.variable} ${marfaFont.variable} antialiased h-full overflow-hidden`}
         suppressHydrationWarning

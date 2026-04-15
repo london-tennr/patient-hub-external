@@ -46,7 +46,7 @@ export function AppShell({ children, className }: AppShellProps) {
               <List className="w-5 h-5 text-[var(--neutral-11)]" />
             </button>
             <span className="text-sm font-semibold text-[var(--neutral-11)]">
-              DMEPOS Factory
+              Best Doctors
             </span>
             <Avatar className="w-8 h-8">
               <AvatarImage src="/images/avatar.png" alt="User avatar" />
@@ -85,15 +85,15 @@ export function AppShell({ children, className }: AppShellProps) {
 
           {/* Main Content Area */}
           {disableInsetWrapper ? (
-            <div className="flex-1 flex flex-col p-0 md:p-2 min-w-0">
+            <div className="flex-1 flex flex-col p-2 min-w-0">
               {children}
             </div>
           ) : (
-            <div className="flex-1 flex flex-col p-0 md:p-2 min-w-0">
+            <div className="flex-1 flex flex-col p-2 min-w-0">
               <main
                 className={cn(
-                  'flex-1 bg-[var(--neutral-1)] md:rounded-xs overflow-y-auto overflow-x-hidden',
-                  'md:shadow-[0_0_6px_1px_rgba(0,0,0,0.03),0_4px_6px_-1px_rgba(0,0,0,0.10),0_2px_4px_-2px_rgba(0,0,0,0.10)]',
+                  'flex-1 bg-[var(--neutral-1)] rounded-xs overflow-y-auto overflow-x-hidden',
+                  'shadow-[0_0_6px_1px_rgba(0,0,0,0.03),0_4px_6px_-1px_rgba(0,0,0,0.10),0_2px_4px_-2px_rgba(0,0,0,0.10)]',
                   className
                 )}
               >

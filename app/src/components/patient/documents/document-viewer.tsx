@@ -30,7 +30,7 @@ export function DocumentViewer({ document, open, onOpenChange }: DocumentViewerP
   if (!document) return null;
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
+    <Sheet open={open} onOpenChange={onOpenChange} modal={false}>
       <SheetContent className="w-[600px] sm:max-w-[600px] p-0 flex flex-col [&>button:last-of-type]:hidden">
         <SheetHeader className="px-6 py-4 border-b">
           <div className="flex items-start justify-between">

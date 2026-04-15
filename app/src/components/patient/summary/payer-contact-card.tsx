@@ -55,11 +55,11 @@ export function PayerContactCard({ insurance }: PayerContactCardProps) {
       <div className="bg-bg-white border border-border-tertiary rounded-md shadow-xs overflow-hidden">
         <div className="flex items-center justify-between px-4 py-2">
           <p className="text-base font-medium lasso:wght-medium leading-6 text-text-primary">
-            Payer Contact
+            Insurance Contact
           </p>
         </div>
         <div className="px-4 py-2 border-t border-border-tertiary">
-          <p className="text-[13px] text-text-tertiary">No payer on file</p>
+          <p className="text-[13px] text-text-tertiary">No insurance on file</p>
         </div>
       </div>
     );
@@ -70,7 +70,7 @@ export function PayerContactCard({ insurance }: PayerContactCardProps) {
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-2">
         <p className="text-base font-medium lasso:wght-medium leading-6 text-text-primary">
-          Payer Contact
+          Insurance Contact
         </p>
         <Badge variant={statusVariant[insurance.status]} className="text-[10px] capitalize h-5">
           {insurance.status}
@@ -79,7 +79,7 @@ export function PayerContactCard({ insurance }: PayerContactCardProps) {
 
       {/* Details */}
       <div className="px-4 border-t border-border-tertiary pt-1.5 pb-2">
-        <CopyableField label="Carrier" value={insurance.carrier} />
+        <CopyableField label="Payer" value={insurance.carrier} />
         <CopyableField label="Plan" value={insurance.plan} />
         <CopyableField label="Member ID" value={insurance.memberId} />
         <CopyableField label="Group #" value={insurance.groupNumber} />

@@ -1,18 +1,16 @@
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
-import { CaretDown, CaretLeft, CaretRight } from '@phosphor-icons/react';
+import { FilterGroup, type FilterCategoryType, type FilterState } from '@tennr/lasso/filter-group';
 import {
-  Popover,
-  PopoverTrigger,
-  PopoverContent,
-} from '@tennr/lasso/popover';
-import {
-  Command,
-  CommandGroup,
-  CommandItem,
-  CommandList,
-} from '@tennr/lasso/command';
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationPrevious,
+  PaginationNext,
+  PaginationEllipsis,
+} from '@tennr/lasso/pagination';
 import { cn } from '@tennr/lasso/utils/cn';
 
 const ITEMS_PER_PAGE = 10;
@@ -45,6 +43,12 @@ function getVisiblePages(current: number, total: number): (number | 'ellipsis')[
 export type ActivitySource = 'tennr' | 'user' | 'system';
 export type ActivityType = 'order_created' | 'order_update' | 'patient_created' | 'patient_update' | 'ehr_log' | 'note' | 'prior_auth' | 'eligibility_benefits';
 
+export interface ChangeLogEntry {
+  field: string;
+  before: string;
+  after: string;
+}
+
 export interface TimelineActivity {
   id: string;
   type: ActivityType;
@@ -58,19 +62,8 @@ export interface TimelineActivity {
     initials: string;
   };
   timestamp: string;
-}
-
-const sourceConfig: Record<ActivitySource, { label: string }> = {
-  tennr: { label: 'Tennr' },
-  user: { label: '' },
-  system: { label: 'Integration' },
-};
-
-function getActivitySourceLabel(activity: TimelineActivity): string {
-  if (activity.ehrSystem) return activity.ehrSystem;
-  if (activity.source === 'user' && activity.author?.name) return activity.author.name;
-  if (activity.source) return sourceConfig[activity.source].label;
-  return '';
+  changeLog?: ChangeLogEntry[];
+  noteContent?: string;
 }
 
 interface TimelineProps {
@@ -78,72 +71,153 @@ interface TimelineProps {
   onAddComment?: (comment: string) => void;
   onSelectActivity?: (activity: TimelineActivity) => void;
   className?: string;
-  filterBy?: 'source' | 'ehrSystem';
 }
 
-const defaultFilterOptions: { value: string; label: string }[] = [
-  { value: 'all', label: 'All' },
-  { value: 'tennr', label: 'Tennr' },
-  { value: 'user', label: 'User' },
-  { value: 'system', label: 'Integration' },
+const activityFilterCategories: FilterCategoryType[] = [
+  {
+    id: 'type',
+    label: 'Type',
+    variant: 'command',
+    childVariant: 'command',
+    values: [
+      { id: 'all', label: 'All' },
+      { id: 'patient', label: 'Patient' },
+      { id: 'order', label: 'Order' },
+    ],
+  },
 ];
 
-const ehrFilterOptions: { value: string; label: string }[] = [
-  { value: 'all', label: 'All' },
-  { value: 'Epic', label: 'Epic' },
-  { value: 'Cerner', label: 'Cerner' },
-  { value: 'Athenahealth', label: 'Athenahealth' },
-  { value: 'eClinicalWorks', label: 'eClinicalWorks' },
-];
+// --- Detail helpers ---
 
-const typeFilterOptions: { value: string; label: string }[] = [
-  { value: 'all', label: 'All' },
-  { value: 'patient', label: 'Patient' },
-  { value: 'order', label: 'Order' },
-];
+function getActivityChangeLog(activity: TimelineActivity): ChangeLogEntry[] {
+  if (activity.changeLog) return activity.changeLog;
+  const desc = (activity.description ?? '').toLowerCase();
 
-export function Timeline({ activities, onSelectActivity, className, filterBy = 'source' }: TimelineProps) {
-  const [selectedFilter, setSelectedFilter] = useState<string>('all');
-  const [filterOpen, setFilterOpen] = useState(false);
-  const [selectedTypeFilter, setSelectedTypeFilter] = useState<string>('all');
-  const [typeFilterOpen, setTypeFilterOpen] = useState(false);
+  if (activity.type === 'patient_update') {
+    if (desc.includes('address')) {
+      return [{ field: 'Address', before: '123 Main Street, Apt 4B, Springfield, IL 62704', after: '456 Oak Avenue, Suite 200, Riverside, CA 92501' }];
+    }
+    if (desc.includes('insurance') || desc.includes('payer')) {
+      return [
+        { field: 'Payer', before: 'Blue Cross Blue Shield — Bronze HMO', after: 'Aetna — Gold PPO' },
+        { field: 'Member ID', before: 'BCBS-881234', after: 'AET-990421' },
+        { field: 'Copay', before: '$40.00', after: '$20.00' },
+      ];
+    }
+    if (desc.includes('phone')) {
+      return [{ field: 'Phone', before: '(555) 123-4567', after: '(555) 987-6543' }];
+    }
+    if (desc.includes('primary care')) {
+      return [{ field: 'Provider', before: 'Dr. Michael Torres — Springfield Family Medicine', after: 'Dr. Sarah Chen — Riverside Internal Medicine' }];
+    }
+    if (desc.includes('emergency contact')) {
+      return [{ field: 'Emergency Contact', before: '—', after: 'Maria Johnson (Spouse) · (555) 222-3344' }];
+    }
+    if (desc.includes('demographics')) {
+      return [
+        { field: 'Email', before: 'patient@oldmail.com', after: 'patient@newmail.com' },
+        { field: 'Preferred Language', before: 'English', after: 'Spanish' },
+      ];
+    }
+    return [{ field: 'Record', before: 'Previous value', after: 'Updated value' }];
+  }
+
+  if (activity.type === 'order_update') {
+    if (desc.includes('status')) {
+      return [{ field: 'Status', before: 'Pending', after: 'In Progress' }];
+    }
+    if (desc.includes('insurance verified') || desc.includes('payer verified')) {
+      return [
+        { field: 'Verification', before: 'Unverified', after: 'Verified — Active' },
+        { field: 'Verified By', before: '—', after: 'System (Auto)' },
+      ];
+    }
+    if (desc.includes('shipping')) {
+      return [
+        { field: 'Shipping Address', before: '123 Main St, Springfield, IL 62704', after: '456 Oak Ave, Riverside, CA 92501' },
+        { field: 'Shipping Method', before: 'Standard (5–7 business days)', after: 'Expedited (2–3 business days)' },
+      ];
+    }
+  }
+
+  return [];
+}
+
+interface DetailField {
+  label: string;
+  value: string;
+  highlight?: boolean;
+}
+
+function getActivityFields(activity: TimelineActivity): DetailField[] {
+  switch (activity.type) {
+    case 'order_update':
+      return [{ label: 'Payer', value: 'Aetna' }];
+    case 'order_created':
+      return [
+        { label: 'Type', value: 'CPAP Device' },
+        { label: 'Payer', value: 'Aetna' },
+      ];
+    case 'prior_auth':
+      return [
+        { label: 'Auth Number', value: 'PA-2026-38291' },
+        { label: 'Payer', value: 'Aetna' },
+        { label: 'Decision', value: 'Approved', highlight: true },
+        { label: 'Valid Through', value: '07/01/2026' },
+      ];
+    case 'eligibility_benefits':
+      return [
+        { label: 'Payer', value: 'Aetna' },
+        { label: 'Plan Type', value: 'Gold PPO' },
+        { label: 'Status', value: 'Active', highlight: true },
+        { label: 'Effective', value: '01/01/2026 — 12/31/2026' },
+        { label: 'Copay', value: '$20.00' },
+        { label: 'Deductible', value: '$350.00 remaining' },
+      ];
+    case 'ehr_log':
+      return [
+        { label: 'EHR System', value: activity.ehrSystem ?? 'BrightTree' },
+        { label: 'Sync Type', value: 'Automatic' },
+      ];
+    default:
+      return [];
+  }
+}
+
+function getNoteContent(activity: TimelineActivity): string | null {
+  if (activity.noteContent) return activity.noteContent;
+  if (activity.type === 'note') {
+    return 'Spoke with patient regarding upcoming device delivery. Patient confirmed current address and requested expedited shipping.';
+  }
+  return null;
+}
+
+
+export function Timeline({ activities, onSelectActivity, className }: TimelineProps) {
+  const [filterState, setFilterState] = useState<FilterState>([
+    { id: 'default-type', filterId: 'type', value: 'all' },
+  ]);
   const [page, setPage] = useState(0);
 
-  const filterOptions = filterBy === 'ehrSystem' ? ehrFilterOptions : defaultFilterOptions;
-  const filterLabel = filterBy === 'ehrSystem' ? 'EHR System' : 'Source';
+  const typeFilterMap: Record<string, ActivityType[]> = {
+    patient: ['patient_created', 'patient_update'],
+    order: ['order_created', 'order_update'],
+  };
 
   const filteredActivities = useMemo(() => {
-    let result = activities;
+    const typeFilter = filterState.find(f => f.filterId === 'type');
+    const selected = typeof typeFilter?.value === 'string' ? typeFilter.value : 'all';
 
-    // Source / EHR filter
-    if (selectedFilter !== 'all') {
-      if (filterBy === 'ehrSystem') {
-        result = result.filter(a => a.ehrSystem === selectedFilter);
-      } else {
-        result = result.filter(a => a.source === selectedFilter);
-      }
-    }
+    if (selected === 'all') return activities;
 
-    // Type filter
-    if (selectedTypeFilter !== 'all') {
-      if (selectedTypeFilter === 'patient') {
-        result = result.filter(a => a.type === 'patient_created' || a.type === 'patient_update');
-      } else if (selectedTypeFilter === 'order') {
-        result = result.filter(a => a.type === 'order_created' || a.type === 'order_update');
-      }
-    }
-
-    return result;
-  }, [activities, selectedFilter, selectedTypeFilter, filterBy]);
+    const allowedTypes = typeFilterMap[selected] ?? [];
+    return activities.filter(a => allowedTypes.includes(a.type));
+  }, [activities, filterState]);
 
   const totalPages = Math.ceil(filteredActivities.length / ITEMS_PER_PAGE);
   const pagedActivities = filteredActivities.slice(page * ITEMS_PER_PAGE, (page + 1) * ITEMS_PER_PAGE);
 
-  const selectedLabel = filterOptions.find(o => o.value === selectedFilter)?.label ?? 'All';
-  const selectedTypeLabel = typeFilterOptions.find(o => o.value === selectedTypeFilter)?.label ?? 'All';
-
-  // Reset page when filters change
-  useEffect(() => { setPage(0); }, [selectedFilter, selectedTypeFilter]);
+  useEffect(() => { setPage(0); }, [filterState]);
 
   const formatActivityDate = (timestamp: string) => {
     const ts = new Date(timestamp);
@@ -156,170 +230,98 @@ export function Timeline({ activities, onSelectActivity, className, filterBy = '
   };
 
   return (
-    <div className={cn('bg-bg-white border border-border-tertiary rounded-md shadow-xs overflow-hidden flex flex-col', className)}>
-      {/* Filters Row */}
-      <div className="flex items-center gap-2 px-2 py-2 bg-bg-white overflow-x-auto border-b border-border-tertiary shrink-0">
-        <div className="flex items-center">
-          <div className="flex items-center border border-border-secondary bg-bg-secondary px-2.5 py-1 rounded-l-full">
-            <span className="text-sm text-text-tertiary font-medium">{filterLabel}</span>
-          </div>
-          <Popover open={filterOpen} onOpenChange={setFilterOpen}>
-            <PopoverTrigger asChild>
-              <button className="flex items-center gap-2 border border-l-0 border-border-secondary bg-bg-secondary px-2.5 py-1 rounded-r-full hover:bg-bg-tertiary transition-colors cursor-pointer">
-                <span className="text-sm text-text-primary font-medium">{selectedLabel}</span>
-                <CaretDown className="size-4 text-text-primary" />
-              </button>
-            </PopoverTrigger>
-            <PopoverContent align="start" className="p-0 w-[160px]">
-              <Command>
-                <CommandList>
-                  <CommandGroup>
-                    {filterOptions.map(option => (
-                      <CommandItem
-                        key={option.value}
-                        onSelect={() => {
-                          setSelectedFilter(option.value);
-                          setPage(0);
-                          setFilterOpen(false);
-                        }}
-                        className="cursor-pointer"
-                      >
-                        {option.label}
-                      </CommandItem>
-                    ))}
-                  </CommandGroup>
-                </CommandList>
-              </Command>
-            </PopoverContent>
-          </Popover>
+    <div className={cn('flex flex-col', className)}>
+      <div className="bg-bg-white border border-border-tertiary rounded-md shadow-xs overflow-hidden flex flex-col">
+        {/* Title Row */}
+        <div className="flex items-center justify-between px-4 py-3 border-b border-border-tertiary shrink-0">
+          <div className="text-base font-medium lasso:wght-medium leading-6 text-foreground">All activity</div>
+        </div>
+        {/* Filters Row */}
+        <div className="flex items-center gap-2 px-2 py-1.5 border-b border-border-tertiary shrink-0 min-h-11 [&_ul>li:has(>.rounded-full)]:hidden">
+          <FilterGroup
+            filters={activityFilterCategories}
+            state={filterState}
+            onChange={setFilterState}
+            onClearAll={() => setFilterState([{ id: 'default-type', filterId: 'type', value: 'all' }])}
+          />
         </div>
 
-        {/* Type filter */}
-        <div className="flex items-center">
-          <div className="flex items-center border border-border-secondary bg-bg-secondary px-2.5 py-1 rounded-l-full">
-            <span className="text-sm text-text-tertiary font-medium">Type</span>
-          </div>
-          <Popover open={typeFilterOpen} onOpenChange={setTypeFilterOpen}>
-            <PopoverTrigger asChild>
-              <button className="flex items-center gap-2 border border-l-0 border-border-secondary bg-bg-secondary px-2.5 py-1 rounded-r-full hover:bg-bg-tertiary transition-colors cursor-pointer">
-                <span className="text-sm text-text-primary font-medium">{selectedTypeLabel}</span>
-                <CaretDown className="size-4 text-text-primary" />
-              </button>
-            </PopoverTrigger>
-            <PopoverContent align="start" className="p-0 w-[160px]">
-              <Command>
-                <CommandList>
-                  <CommandGroup>
-                    {typeFilterOptions.map(option => (
-                      <CommandItem
-                        key={option.value}
-                        onSelect={() => {
-                          setSelectedTypeFilter(option.value);
-                          setTypeFilterOpen(false);
-                        }}
-                        className="cursor-pointer"
-                      >
-                        {option.label}
-                      </CommandItem>
-                    ))}
-                  </CommandGroup>
-                </CommandList>
-              </Command>
-            </PopoverContent>
-          </Popover>
-        </div>
-      </div>
+        {/* Activity List */}
+        <div className="flex flex-col overflow-y-auto min-h-0">
+          {filteredActivities.length === 0 && (
+            <div className="px-3 py-6 text-center text-sm text-text-tertiary">
+              No activities match the selected filter.
+            </div>
+          )}
+          {pagedActivities.map((activity, index) => {
+            const isLast = index === pagedActivities.length - 1;
 
-      {/* Activity List */}
-      <div className="flex flex-col overflow-y-auto min-h-0">
-        {filteredActivities.length === 0 && (
-          <div className="px-3 py-6 text-center text-sm text-text-tertiary">
-            No activities match the selected filter.
-          </div>
-        )}
-        {pagedActivities.map((activity, index) => {
-          const isLast = index === pagedActivities.length - 1;
-
-          return (
-            <div
-              key={activity.id}
-              onClick={onSelectActivity ? () => onSelectActivity(activity) : undefined}
-              className={cn(
-                'flex items-start gap-2.5 px-3 py-3 text-left hover:bg-accent/50 transition-colors',
-                onSelectActivity && 'cursor-pointer',
-                !isLast && 'border-b border-border',
-              )}
-            >
-              <div className="flex flex-col gap-0.5 min-w-0 w-full">
-                <div className="flex items-center gap-1.5 min-w-0 flex-wrap">
+            return (
+              <div
+                key={activity.id}
+                className={cn(
+                  'flex items-start justify-between gap-2 px-3 py-2.5 text-left min-w-0 transition-colors cursor-pointer',
+                  !isLast && 'border-b border-border',
+                  'hover:bg-bg-secondary',
+                )}
+                onClick={() => onSelectActivity?.(activity)}
+              >
+                <div className="flex flex-col gap-0.5 min-w-0">
                   <span className="text-[13px] font-medium lasso:wght-medium text-text-primary">{activity.title}</span>
-                  {getActivitySourceLabel(activity) && (
-                    <span className="text-[10px] text-text-tertiary shrink-0 border border-border-secondary bg-bg-secondary px-1.5 py-0.5 rounded-full">{getActivitySourceLabel(activity)}</span>
+                  {activity.description && (
+                    <span className="text-[11px] text-text-secondary">{activity.description}</span>
                   )}
                 </div>
-                {activity.description && (
-                  <span className="text-[11px] text-text-secondary">{activity.description}</span>
-                )}
-                <span className="text-[11px] text-text-tertiary">
+                <span className="text-[11px] text-text-tertiary whitespace-nowrap shrink-0">
                   {formatActivityDate(activity.timestamp)} · {formatActivityTime(activity.timestamp)}
                 </span>
               </div>
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
       </div>
 
-      {/* Footer with pagination */}
-      <div className="flex items-center justify-between px-3 py-2 md:px-4 md:py-3 border-t border-border">
-        <p className="hidden sm:block text-sm text-text-secondary">
-          Showing {filteredActivities.length === 0 ? 0 : page * ITEMS_PER_PAGE + 1}-{Math.min((page + 1) * ITEMS_PER_PAGE, filteredActivities.length)} of{' '}
-          {filteredActivities.length} results
-        </p>
-        {totalPages > 1 && (
-          <div className="flex items-center gap-1">
-            <button
-              onClick={() => setPage(p => Math.max(0, p - 1))}
-              disabled={page === 0}
-              className="flex items-center gap-1 px-2 py-1 text-sm text-text-secondary hover:text-text-primary disabled:opacity-40 disabled:pointer-events-none transition-colors cursor-pointer"
-            >
-              <CaretLeft weight="regular" className="size-3.5" />
-              Previous
-            </button>
-
-            <div className="hidden sm:flex items-center gap-1">
+      {/* Pagination outside the card */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between pt-4">
+          <span className="text-sm text-text-secondary">
+            Showing {page * ITEMS_PER_PAGE + 1}-{Math.min((page + 1) * ITEMS_PER_PAGE, filteredActivities.length)} of {filteredActivities.length} results
+          </span>
+          <Pagination className="w-auto mx-0">
+            <PaginationContent>
+              <PaginationItem>
+                <PaginationPrevious
+                  onClick={() => setPage(p => Math.max(0, p - 1))}
+                  className={cn(page === 0 && 'pointer-events-none opacity-40')}
+                />
+              </PaginationItem>
               {getVisiblePages(page, totalPages).map((p, i) =>
                 p === 'ellipsis' ? (
-                  <span key={`ellipsis-${i}`} className="flex items-center justify-center size-8 text-sm text-text-secondary">
-                    &middot;&middot;&middot;
-                  </span>
+                  <PaginationItem key={`ellipsis-${i}`}>
+                    <PaginationEllipsis />
+                  </PaginationItem>
                 ) : (
-                  <button
-                    key={p}
-                    onClick={() => setPage(p)}
-                    className={cn(
-                      'flex items-center justify-center size-8 text-sm rounded-md transition-colors cursor-pointer',
-                      p === page
-                        ? 'border border-border-primary text-text-primary font-medium'
-                        : 'text-text-secondary hover:text-text-primary'
-                    )}
-                  >
-                    {p + 1}
-                  </button>
+                  <PaginationItem key={p}>
+                    <PaginationLink
+                      isActive={p === page}
+                      onClick={() => setPage(p)}
+                    >
+                      {p + 1}
+                    </PaginationLink>
+                  </PaginationItem>
                 )
               )}
-            </div>
+              <PaginationItem>
+                <PaginationNext
+                  onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
+                  className={cn(page === totalPages - 1 && 'pointer-events-none opacity-40')}
+                />
+              </PaginationItem>
+            </PaginationContent>
+          </Pagination>
+        </div>
+      )}
 
-            <button
-              onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
-              disabled={page === totalPages - 1}
-              className="flex items-center gap-1 px-2 py-1 text-sm text-text-secondary hover:text-text-primary disabled:opacity-40 disabled:pointer-events-none transition-colors cursor-pointer"
-            >
-              Next
-              <CaretRight weight="regular" className="size-3.5" />
-            </button>
-          </div>
-        )}
-      </div>
     </div>
   );
 }

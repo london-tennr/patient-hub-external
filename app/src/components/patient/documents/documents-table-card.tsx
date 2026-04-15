@@ -1,8 +1,7 @@
 'use client';
 
-import { useState, useMemo, useCallback } from 'react';
-import { CaretUp, CaretDown, Eye, DownloadSimple } from '@phosphor-icons/react';
-import { ButtonV2 } from '@tennr/lasso/buttonV2';
+import { useState, useMemo, useCallback, useEffect } from 'react';
+import { CaretUp, CaretDown, DownloadSimple } from '@phosphor-icons/react';
 import {
   Table,
   TableBody,
@@ -22,8 +21,44 @@ import {
   CommandItem,
   CommandList,
 } from '@tennr/lasso/command';
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationPrevious,
+  PaginationNext,
+  PaginationEllipsis,
+} from '@tennr/lasso/pagination';
 import { cn } from '@tennr/lasso/utils/cn';
 import type { OrderDocument } from '@/types/order';
+
+const DOCS_PER_PAGE = 10;
+
+function getVisiblePages(current: number, total: number): (number | 'ellipsis')[] {
+  if (total <= 5) {
+    return Array.from({ length: total }, (_, i) => i);
+  }
+
+  const pages: (number | 'ellipsis')[] = [];
+  const near = new Set<number>();
+  near.add(current);
+  if (current > 0) near.add(current - 1);
+  if (current < total - 1) near.add(current + 1);
+  near.add(0);
+  near.add(total - 1);
+
+  const sorted = Array.from(near).sort((a, b) => a - b);
+
+  for (let i = 0; i < sorted.length; i++) {
+    if (i > 0 && sorted[i] - sorted[i - 1] > 1) {
+      pages.push('ellipsis');
+    }
+    pages.push(sorted[i]);
+  }
+
+  return pages;
+}
 
 interface PatientDocument extends OrderDocument {
   orderId?: string;
@@ -68,6 +103,7 @@ export function DocumentsTableCard({ documents, onViewDocument, className }: Doc
   const [filterOpen, setFilterOpen] = useState(false);
   const [sortColumn, setSortColumn] = useState<DocSortColumn>('date');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
+  const [page, setPage] = useState(0);
 
   const handleSort = useCallback((column: DocSortColumn) => {
     if (sortColumn === column) {
@@ -115,23 +151,29 @@ export function DocumentsTableCard({ documents, onViewDocument, className }: Doc
     return result;
   }, [documents, selectedType, sortColumn, sortDirection]);
 
+  const totalPages = Math.ceil(filteredDocuments.length / DOCS_PER_PAGE);
+  const pagedDocuments = filteredDocuments.slice(page * DOCS_PER_PAGE, (page + 1) * DOCS_PER_PAGE);
+
+  useEffect(() => { setPage(0); }, [selectedType, sortColumn, sortDirection]);
+
   const selectedLabel = filterOptions.find(opt => opt.id === selectedType)?.label || 'All';
 
-  const columns: { key: DocSortColumn; label: string }[] = [
-    { key: 'name', label: 'Name' },
-    { key: 'type', label: 'Type' },
-    { key: 'order', label: 'Order' },
-    { key: 'date', label: 'Date' },
-    { key: 'source', label: 'Source' },
+  const columns: { key: DocSortColumn | 'download'; label: string; sortable: boolean }[] = [
+    { key: 'name', label: 'Name', sortable: true },
+    { key: 'type', label: 'Type', sortable: true },
+    { key: 'order', label: 'Order', sortable: true },
+    { key: 'date', label: 'Date', sortable: true },
+    { key: 'source', label: 'Source', sortable: true },
+    { key: 'download', label: 'Download', sortable: false },
   ];
 
   return (
-    <div
-      className={cn(
-        'bg-bg-white border border-border-tertiary rounded-md shadow-xs overflow-hidden flex flex-col',
-        className
-      )}
-    >
+    <div className={cn('flex flex-col', className)}>
+    <div className="bg-bg-white border border-border-tertiary rounded-md shadow-xs overflow-hidden flex flex-col">
+      {/* Title Row */}
+      <div className="flex items-center justify-between px-4 py-3 border-b border-border-tertiary shrink-0">
+        <div className="text-base font-medium lasso:wght-medium leading-6 text-foreground">All documents</div>
+      </div>
       {/* Filters Row */}
       <div className="flex items-center gap-2 px-2 py-2 bg-bg-white overflow-x-auto border-b border-border-tertiary">
         <div className="flex items-center">
@@ -142,7 +184,7 @@ export function DocumentsTableCard({ documents, onViewDocument, className }: Doc
           {/* Value pill with dropdown */}
           <Popover open={filterOpen} onOpenChange={setFilterOpen}>
             <PopoverTrigger asChild>
-              <button className="flex items-center gap-2 border border-l-0 border-border-secondary bg-bg-secondary px-2.5 py-1 rounded-r-full hover:bg-bg-tertiary transition-colors cursor-pointer">
+              <button suppressHydrationWarning className="flex items-center gap-2 border border-l-0 border-border-secondary bg-bg-secondary px-2.5 py-1 rounded-r-full hover:bg-bg-tertiary transition-colors cursor-pointer">
                 <span className="text-sm text-text-primary font-medium">{selectedLabel}</span>
                 <CaretDown className="size-4 text-text-primary" />
               </button>
@@ -179,52 +221,58 @@ export function DocumentsTableCard({ documents, onViewDocument, className }: Doc
               <TableHead
                 key={col.key}
                 className={cn(
-                  'text-muted-foreground font-medium h-full cursor-pointer select-none hover:text-foreground transition-colors',
-                  (col.key === 'order' || col.key === 'source') && 'hidden md:table-cell'
+                  'text-muted-foreground font-medium h-full select-none transition-colors',
+                  col.sortable && 'cursor-pointer hover:text-foreground',
+                  (col.key === 'order' || col.key === 'source') && 'hidden md:table-cell',
+                  col.key === 'download' && 'w-20',
                 )}
-                onClick={() => handleSort(col.key)}
+                onClick={() => col.sortable && handleSort(col.key as DocSortColumn)}
               >
-                <div className="flex items-center gap-1">
-                  {col.label}
-                  <span className="flex flex-col -space-y-1">
-                    <CaretUp
-                      weight="bold"
-                      className={cn(
-                        'size-3',
-                        sortColumn === col.key && sortDirection === 'asc' ? 'text-foreground' : 'text-muted-foreground/40'
-                      )}
-                    />
-                    <CaretDown
-                      weight="bold"
-                      className={cn(
-                        'size-3',
-                        sortColumn === col.key && sortDirection === 'desc' ? 'text-foreground' : 'text-muted-foreground/40'
-                      )}
-                    />
-                  </span>
-                </div>
+                {col.key === 'download' ? (
+                  <span>{col.label}</span>
+                ) : (
+                  <div className="flex items-center gap-1">
+                    {col.label}
+                    {col.sortable && (
+                      <span className="flex flex-col -space-y-1">
+                        <CaretUp
+                          weight="bold"
+                          className={cn(
+                            'size-3',
+                            sortColumn === col.key && sortDirection === 'asc' ? 'text-foreground' : 'text-muted-foreground/40'
+                          )}
+                        />
+                        <CaretDown
+                          weight="bold"
+                          className={cn(
+                            'size-3',
+                            sortColumn === col.key && sortDirection === 'desc' ? 'text-foreground' : 'text-muted-foreground/40'
+                          )}
+                        />
+                      </span>
+                    )}
+                  </div>
+                )}
               </TableHead>
             ))}
-            <TableHead className="text-muted-foreground font-medium h-full w-[86px]">
-              {/* Actions column */}
-            </TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
-          {filteredDocuments.length === 0 ? (
+          {pagedDocuments.length === 0 ? (
             <TableRow>
               <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
                 No documents found
               </TableCell>
             </TableRow>
           ) : (
-            filteredDocuments.map(doc => (
+            pagedDocuments.map(doc => (
               <TableRow
                 key={doc.id}
-                className="border-b border-border hover:bg-accent/50 transition-colors"
+                onClick={() => onViewDocument?.(doc)}
+                className="cursor-pointer border-b border-border hover:bg-accent/50 transition-colors"
               >
-                <TableCell className="text-foreground">
-                  <span className="break-words text-sm">{doc.name}</span>
+                <TableCell className="text-foreground text-sm">
+                  <span className="break-words">{doc.name}</span>
                 </TableCell>
                 <TableCell className="text-foreground text-sm">
                   {documentTypeLabels[doc.type] || doc.type}
@@ -238,30 +286,14 @@ export function DocumentsTableCard({ documents, onViewDocument, className }: Doc
                 <TableCell className="text-foreground text-sm hidden md:table-cell">
                   {sourceLabels[doc.source] || doc.source}
                 </TableCell>
-                <TableCell>
-                  <div className="flex justify-end gap-1">
-                    <ButtonV2
-                      variant="outline"
-                      size="icon"
-                      className="rounded-full size-9 border-border-secondary hover:bg-accent/50"
-                      onClick={() => onViewDocument?.(doc)}
-                    >
-                      <Eye className="size-4 text-foreground" />
-                    </ButtonV2>
-                    <ButtonV2
-                      variant="outline"
-                      size="icon"
-                      className="rounded-full size-9 border-border-secondary hover:bg-accent/50 hidden md:flex"
-                      onClick={() => {
-                        const link = document.createElement('a');
-                        link.href = doc.url;
-                        link.download = doc.name;
-                        link.click();
-                      }}
-                    >
-                      <DownloadSimple className="size-4 text-foreground" />
-                    </ButtonV2>
-                  </div>
+                <TableCell className="w-20">
+                  <button
+                    onClick={(e) => { e.stopPropagation(); }}
+                    className="inline-flex items-center justify-center size-7 rounded-md hover:bg-bg-tertiary transition-colors cursor-pointer"
+                    aria-label="Download"
+                  >
+                    <DownloadSimple weight="regular" className="size-4 text-text-secondary" />
+                  </button>
                 </TableCell>
               </TableRow>
             ))
@@ -269,12 +301,48 @@ export function DocumentsTableCard({ documents, onViewDocument, className }: Doc
         </TableBody>
       </Table>
 
-      {/* Footer */}
-      <div className="flex items-center justify-between px-4 py-3 border-t border-border">
-        <p className="text-sm text-text-secondary">
-          Showing {filteredDocuments.length} of {documents.length} document{documents.length !== 1 ? 's' : ''}
-        </p>
-      </div>
+    </div>
+
+      {/* Pagination — outside the card */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between pt-4">
+          <span className="text-sm text-text-secondary">
+            Showing {page * DOCS_PER_PAGE + 1}-{Math.min((page + 1) * DOCS_PER_PAGE, filteredDocuments.length)} of {filteredDocuments.length} results
+          </span>
+          <Pagination className="w-auto mx-0">
+            <PaginationContent>
+              <PaginationItem>
+                <PaginationPrevious
+                  onClick={() => setPage(p => Math.max(0, p - 1))}
+                  className={cn(page === 0 && 'pointer-events-none opacity-40')}
+                />
+              </PaginationItem>
+              {getVisiblePages(page, totalPages).map((p, i) =>
+                p === 'ellipsis' ? (
+                  <PaginationItem key={`ellipsis-${i}`}>
+                    <PaginationEllipsis />
+                  </PaginationItem>
+                ) : (
+                  <PaginationItem key={p}>
+                    <PaginationLink
+                      isActive={p === page}
+                      onClick={() => setPage(p)}
+                    >
+                      {p + 1}
+                    </PaginationLink>
+                  </PaginationItem>
+                )
+              )}
+              <PaginationItem>
+                <PaginationNext
+                  onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
+                  className={cn(page === totalPages - 1 && 'pointer-events-none opacity-40')}
+                />
+              </PaginationItem>
+            </PaginationContent>
+          </Pagination>
+        </div>
+      )}
     </div>
   );
 }

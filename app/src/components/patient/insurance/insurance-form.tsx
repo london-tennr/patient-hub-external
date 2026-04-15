@@ -23,7 +23,7 @@ export function InsuranceForm({ insurance, title }: InsuranceFormProps) {
           <div className="text-base font-medium lasso:wght-medium leading-6 text-foreground">{title}</div>
         </div>
         <div className="p-4">
-          <p className="text-sm text-text-secondary">No payer on file</p>
+          <p className="text-sm text-text-secondary">No insurance on file</p>
         </div>
       </div>
     );
@@ -49,7 +49,7 @@ export function InsuranceForm({ insurance, title }: InsuranceFormProps) {
       <div className="p-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
-            <label className="text-sm font-medium">Carrier</label>
+            <label className="text-sm font-medium">Payer</label>
             <p className="text-sm">{insurance.carrier}</p>
           </div>
           <div className="space-y-2">

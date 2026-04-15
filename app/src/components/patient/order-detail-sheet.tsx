@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { X, CaretDown, Clock, FileText } from '@phosphor-icons/react';
 import { Sheet, SheetContent, SheetTitle } from '@tennr/lasso/sheet';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@tennr/lasso/tabs';
 import { Badge } from '@tennr/lasso/badge';
 import { cn } from '@tennr/lasso/utils/cn';
 import type { Patient, PatientStatus, PatientStage } from '@/types/patient';
@@ -28,8 +29,8 @@ const statusBadgeConfig: Record<
 
 const ORDER_STEPS = [
   { id: 'referral_received', label: 'Referral Received' },
-  { id: 'insurance_verification', label: 'Payer Verification' },
-  { id: 'insurance_policy_review', label: 'Payer Policy Review' },
+  { id: 'insurance_verification', label: 'Insurance Verification' },
+  { id: 'insurance_policy_review', label: 'Insurance Policy Review' },
   { id: 'ready_for_claim', label: 'Ready for Claim Submission' },
 ] as const;
 
@@ -43,7 +44,6 @@ const stageToCompletedSteps: Record<PatientStage, number> = {
   claim_submitted: 4,
 };
 
-const TABS = ['Order processing', 'Call history', 'Documents', 'Notes'];
 
 function formatDob(dob: string): string {
   const date = new Date(dob + 'T00:00:00');
@@ -113,7 +113,7 @@ function deriveStepStatuses(patient: Patient): ('completed' | 'current' | 'pendi
 }
 
 export function OrderDetailSheet({ patient, open, onOpenChange }: OrderDetailSheetProps) {
-  const [activeTab, setActiveTab] = useState(0);
+  const [activeTab, setActiveTab] = useState('order_processing');
   const [viewingDoc, setViewingDoc] = useState<ViewableDocument | null>(null);
 
   if (!patient) return null;
@@ -124,7 +124,7 @@ export function OrderDetailSheet({ patient, open, onOpenChange }: OrderDetailShe
   const documents = order?.documents ?? [];
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
+    <Sheet open={open} onOpenChange={onOpenChange} modal={false}>
       <SheetContent
         side="right"
         className="w-full max-w-[520px] sm:max-w-[520px] p-0 flex flex-col gap-0 [&>button]:hidden"
@@ -145,7 +145,7 @@ export function OrderDetailSheet({ patient, open, onOpenChange }: OrderDetailShe
 
         {/* Scrollable content */}
         <div className="flex-1 overflow-y-auto">
-          {/* Order Status / Payer */}
+          {/* Order Status / Insurance */}
           <div className="flex gap-10 px-6 py-4">
             <div className="flex flex-col gap-1.5">
               <span className="text-[11px] font-medium text-text-tertiary uppercase tracking-wider">
@@ -155,7 +155,7 @@ export function OrderDetailSheet({ patient, open, onOpenChange }: OrderDetailShe
             </div>
             <div className="flex flex-col gap-1.5">
               <span className="text-[11px] font-medium text-text-tertiary uppercase tracking-wider">
-                Payer
+                Insurance
               </span>
               <span className="text-sm text-text-secondary">{order?.payer ?? '—'}</span>
             </div>
@@ -197,28 +197,18 @@ export function OrderDetailSheet({ patient, open, onOpenChange }: OrderDetailShe
           </div>
 
           {/* Tabs */}
-          <div className="flex items-center gap-6 px-6 border-b border-border-secondary">
-            {TABS.map((tab, i) => (
-              <button
-                key={tab}
-                onClick={() => setActiveTab(i)}
-                className={cn(
-                  'relative pb-3 text-sm transition-colors cursor-pointer whitespace-nowrap',
-                  i === activeTab
-                    ? 'font-semibold text-text-primary'
-                    : 'text-text-tertiary hover:text-text-secondary'
-                )}
-              >
-                {tab}
-                {i === activeTab && (
-                  <span className="absolute bottom-0 left-0 right-0 h-[2.5px] bg-brand-terracotta rounded-full" />
-                )}
-              </button>
-            ))}
+          <Tabs value={activeTab} onValueChange={setActiveTab}>
+          <div className="px-6">
+            <TabsList variant="line">
+              <TabsTrigger variant="line" value="order_processing">Order processing</TabsTrigger>
+              <TabsTrigger variant="line" value="call_history">Call history</TabsTrigger>
+              <TabsTrigger variant="line" value="documents">Documents</TabsTrigger>
+              <TabsTrigger variant="line" value="notes">Notes</TabsTrigger>
+            </TabsList>
           </div>
 
           {/* Order Processing — Horizontal Stepper */}
-          {activeTab === 0 && (
+          <TabsContent value="order_processing" className="mt-0">{(
             <div className="px-6 py-6 flex flex-col gap-6">
               {/* Stepper */}
               <div className="grid grid-cols-4 gap-3">
@@ -268,10 +258,17 @@ export function OrderDetailSheet({ patient, open, onOpenChange }: OrderDetailShe
                 </div>
               </div>
             </div>
-          )}
+          )}</TabsContent>
+
+          {/* Call History tab */}
+          <TabsContent value="call_history" className="mt-0">
+            <div className="px-6 py-12 text-center text-sm text-text-tertiary">
+              No call history yet
+            </div>
+          </TabsContent>
 
           {/* Documents tab */}
-          {activeTab === 2 && (
+          <TabsContent value="documents" className="mt-0">
             <div className="px-6 py-5 flex flex-col gap-2">
               {documents.length === 0 ? (
                 <div className="py-12 text-center text-sm text-text-tertiary">
@@ -300,14 +297,15 @@ export function OrderDetailSheet({ patient, open, onOpenChange }: OrderDetailShe
                 ))
               )}
             </div>
-          )}
+          </TabsContent>
 
-          {/* Placeholder for other tabs */}
-          {activeTab !== 0 && activeTab !== 2 && (
+          {/* Notes tab */}
+          <TabsContent value="notes" className="mt-0">
             <div className="px-6 py-12 text-center text-sm text-text-tertiary">
-              No {TABS[activeTab]?.toLowerCase()} yet
+              No notes yet
             </div>
-          )}
+          </TabsContent>
+          </Tabs>
         </div>
 
         {/* Full-page document viewer */}

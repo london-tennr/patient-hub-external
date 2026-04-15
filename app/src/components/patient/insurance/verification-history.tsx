@@ -39,7 +39,6 @@ export function VerificationHistory({ history }: VerificationHistoryProps) {
               <TableRow>
                 <TableHead>Date</TableHead>
                 <TableHead>Result</TableHead>
-                <TableHead>Run By</TableHead>
                 <TableHead className="hidden md:table-cell">Notes</TableHead>
               </TableRow>
             </TableHeader>
@@ -52,7 +51,6 @@ export function VerificationHistory({ history }: VerificationHistoryProps) {
                       {resultConfig[attempt.result].label}
                     </Badge>
                   </TableCell>
-                  <TableCell>{attempt.runBy}</TableCell>
                   <TableCell className="text-text-secondary hidden md:table-cell">{attempt.notes || '—'}</TableCell>
                 </TableRow>
               ))}

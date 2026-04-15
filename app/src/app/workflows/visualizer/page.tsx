@@ -74,7 +74,7 @@ const mockWorkflows: Workflow[] = [
   {
     id: 'wf-verify-insurance',
     name: 'Verify Insurance',
-    description: 'Validates insurance eligibility and benefits with payer systems',
+    description: 'Validates insurance eligibility and benefits with insurance systems',
     status: 'active',
     triggerType: 'workflow',
     triggerConfig: { sourceWorkflowId: 'wf-intake' },
@@ -180,7 +180,7 @@ const mockWorkflows: Workflow[] = [
   {
     id: 'wf-prior-auth',
     name: 'Prior Authorization',
-    description: 'Handles prior authorization requests with payers',
+    description: 'Handles prior authorization requests with insurance',
     status: 'active',
     triggerType: 'workflow',
     inputs: [
@@ -195,7 +195,7 @@ const mockWorkflows: Workflow[] = [
     lastRun: '2024-01-15T14:55:00Z',
     runCount: 3892,
     avgDuration: 5600,
-    tags: ['prior-auth', 'payer'],
+    tags: ['prior-auth', 'insurance'],
     createdAt: '2023-07-15T00:00:00Z',
     updatedAt: '2024-01-13T00:00:00Z',
   },

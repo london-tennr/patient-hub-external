@@ -119,14 +119,14 @@ const mockOrders: Order[] = [
     items: [{ id: 'LI003', description: 'CGM supply allowance', hcpcsCode: 'A4239', product: 'Freestyle Libre 3 sensors', quantity: 2 }],
     stage: 'validation',
     subStatus: 'awaiting_response',
-    missingInfo: ['Physician signature on CMN form', 'Updated payer card (front and back)'],
+    missingInfo: ['Physician signature on CMN form', 'Updated insurance card (front and back)'],
     referringPractitioner: null,
     referringFacility: null,
     dateCreated: '2026-04-02',
     lastUpdated: '2026-04-02',
     documents: [],
     notes: [
-      { id: 'N-003a', content: 'Payer verification submitted to carrier.', author: 'Tennr System', createdAt: '2026-04-02T09:15:00Z' },
+      { id: 'N-003a', content: 'Insurance verification submitted to payer.', author: 'Tennr System', createdAt: '2026-04-02T09:15:00Z' },
       { id: 'N-003b', content: 'Patient confirmed current address and delivery preferences.', author: 'Jane Miller', createdAt: '2026-04-02T11:30:00Z' },
     ],
   },
@@ -150,7 +150,7 @@ const mockOrders: Order[] = [
     lastUpdated: '2026-03-29',
     documents: [],
     notes: [
-      { id: 'N-BUG1', content: 'Payer denied coverage — patient does not meet AHI threshold per LCD policy.', author: 'Tennr System', createdAt: '2026-03-29T14:22:00Z' },
+      { id: 'N-BUG1', content: 'Insurance denied coverage — patient does not meet AHI threshold per LCD policy.', author: 'Tennr System', createdAt: '2026-03-29T14:22:00Z' },
       { id: 'N-BUG2', content: 'Contacted referring provider to request updated sleep study.', author: 'Jane Miller', createdAt: '2026-03-29T16:05:00Z' },
     ],
     rejectionReasons: ['Patient does not meet AHI ≥ 15 threshold per LCD L33718', 'Sleep study older than 24 months'],
@@ -574,9 +574,9 @@ const activityTemplates: {
   orderIds?: string[];
 }[] = [
   { type: 'order_created', title: 'Order created', descriptions: ['Respiratory / Oxygen', 'CPAP / BiPAP', 'Enteral Nutrition', 'Wound Care Supplies', 'Infusion Therapy', 'Mobility / Wheelchair', 'Hospital Bed / Equipment'], orderIds: ['Order-4821', 'Order-3190', 'Order-2847', 'Order-5512', 'Order-6103'] },
-  { type: 'order_update', title: 'Order updated', descriptions: ['Payer verified', 'Prior auth submitted', 'Status changed to In Progress', 'Documents uploaded', 'Shipping address updated', 'Claim submitted', 'Authorization approved'], orderIds: ['Order-4821', 'Order-3190', 'Order-2847', 'Order-5512', 'Order-6103'] },
+  { type: 'order_update', title: 'Order updated', descriptions: ['Insurance verified', 'Prior auth submitted', 'Status changed to In Progress', 'Documents uploaded', 'Shipping address updated', 'Claim submitted', 'Authorization approved'], orderIds: ['Order-4821', 'Order-3190', 'Order-2847', 'Order-5512', 'Order-6103'] },
   { type: 'patient_created', title: 'Patient created', descriptions: [] },
-  { type: 'patient_update', title: 'Patient updated', descriptions: ['Demographics updated', 'Payer info updated', 'Phone number changed', 'Address updated', 'Primary care provider updated', 'Emergency contact added'] },
+  { type: 'patient_update', title: 'Patient updated', descriptions: ['Demographics updated', 'Insurance info updated', 'Phone number changed', 'Address updated', 'Primary care provider updated', 'Emergency contact added'] },
 ];
 
 const timelineUserNames: { name: string; initials: string }[] = [
@@ -604,10 +604,11 @@ const orderIdToName: Record<string, string> = {
 function generateTimelineActivities(count: number): TimelineActivity[] {
   const activities: TimelineActivity[] = [];
   const baseDate = new Date('2026-03-30T17:00:00Z');
+  const nonCreatedTemplates = activityTemplates.filter(t => t.type !== 'patient_created');
 
-  for (let i = 0; i < count; i++) {
+  for (let i = 0; i < count - 1; i++) {
     const seed = (i * 7 + 13) % 100;
-    const template = activityTemplates[seed % activityTemplates.length];
+    const template = nonCreatedTemplates[seed % nonCreatedTemplates.length];
     const ts = new Date(baseDate);
     ts.setDate(ts.getDate() - Math.floor(i * 1.8));
     ts.setHours(8 + (seed % 10), (seed * 7) % 60);
@@ -639,10 +640,7 @@ function generateTimelineActivities(count: number): TimelineActivity[] {
       description = template.descriptions[seed % template.descriptions.length];
     }
 
-    // For order types, include the order ID in the title (e.g. "Order-5512 updated")
-    const title = isOrderType && orderId
-      ? `${orderId} ${template.type === 'order_created' ? 'created' : 'updated'}`
-      : template.title;
+    const title = template.title;
 
     activities.push({
       id: String(i + 1),
@@ -655,6 +653,18 @@ function generateTimelineActivities(count: number): TimelineActivity[] {
       timestamp: ts.toISOString(),
     });
   }
+
+  // Patient created is always the very first event (oldest timestamp, last in the list)
+  const createdTs = new Date(baseDate);
+  createdTs.setDate(createdTs.getDate() - Math.floor((count - 1) * 1.8));
+  createdTs.setHours(9, 0);
+  activities.push({
+    id: String(count),
+    type: 'patient_created',
+    title: 'Patient created',
+    source: 'system',
+    timestamp: createdTs.toISOString(),
+  });
 
   return activities;
 }
@@ -680,38 +690,79 @@ interface TimelineActivity {
   timestamp: string;
 }
 
-const mockDocuments: PatientDocument[] = [
-  {
-    id: 'doc1',
-    name: 'Sleep Study Report.pdf',
-    type: 'sleep_study',
-    dateAdded: '2026-01-09',
-    source: 'bright_tree',
-    url: '#',
-    orderId: 'ORD001',
-    orderNumber: 'Order number',
-  },
-  {
-    id: 'doc2',
-    name: 'Prior Authorization Form.pdf',
-    type: 'prior_auth',
-    dateAdded: '2026-01-14',
-    source: 'bright_tree',
-    url: '#',
-    orderId: 'ORD001',
-    orderNumber: 'Order number',
-  },
-  {
-    id: 'doc3',
-    name: 'Certificate of Medical Necessity.pdf',
-    type: 'cmn',
-    dateAdded: '2026-01-15',
-    source: 'bright_tree',
-    url: '#',
-    orderId: 'ORD002',
-    orderNumber: 'Order number',
-  },
+const documentTemplates: { name: string; type: string }[] = [
+  { name: 'Sleep Study Report.pdf', type: 'sleep_study' },
+  { name: 'Polysomnography Results.pdf', type: 'sleep_study' },
+  { name: 'Home Sleep Test Report.pdf', type: 'sleep_study' },
+  { name: 'Titration Study.pdf', type: 'sleep_study' },
+  { name: 'Prior Authorization Form.pdf', type: 'prior_auth' },
+  { name: 'Prior Auth Approval Letter.pdf', type: 'prior_auth' },
+  { name: 'Prior Auth Denial Notice.pdf', type: 'prior_auth' },
+  { name: 'Prior Auth Appeal.pdf', type: 'prior_auth' },
+  { name: 'Peer-to-Peer Review Request.pdf', type: 'prior_auth' },
+  { name: 'Certificate of Medical Necessity.pdf', type: 'cmn' },
+  { name: 'CMN Renewal Form.pdf', type: 'cmn' },
+  { name: 'Physician Order Form.pdf', type: 'cmn' },
+  { name: 'Detailed Written Order.pdf', type: 'cmn' },
+  { name: 'Referral Letter.pdf', type: 'other' },
+  { name: 'Fax Referral — Dr. Torres.pdf', type: 'other' },
+  { name: 'Patient Demographics.pdf', type: 'other' },
+  { name: 'Insurance Card — Front.pdf', type: 'other' },
+  { name: 'Insurance Card — Back.pdf', type: 'other' },
+  { name: 'Eligibility Verification Report.pdf', type: 'other' },
+  { name: 'Benefits Summary.pdf', type: 'other' },
+  { name: 'Explanation of Benefits.pdf', type: 'other' },
+  { name: 'Progress Notes — 03/2026.pdf', type: 'other' },
+  { name: 'Progress Notes — 02/2026.pdf', type: 'other' },
+  { name: 'Progress Notes — 01/2026.pdf', type: 'other' },
+  { name: 'Clinical Notes — Pulmonology.pdf', type: 'other' },
+  { name: 'Face-to-Face Encounter Notes.pdf', type: 'other' },
+  { name: 'Discharge Summary.pdf', type: 'other' },
+  { name: 'Lab Results — CBC.pdf', type: 'other' },
+  { name: 'Lab Results — Metabolic Panel.pdf', type: 'other' },
+  { name: 'ABG Test Results.pdf', type: 'other' },
+  { name: 'Oxygen Saturation Report.pdf', type: 'other' },
+  { name: 'Spirometry Results.pdf', type: 'other' },
+  { name: 'Chest X-Ray Report.pdf', type: 'other' },
+  { name: 'CT Scan — Thorax.pdf', type: 'other' },
+  { name: 'Claim Submission Form.pdf', type: 'other' },
+  { name: 'HCPCS Coding Sheet.pdf', type: 'other' },
+  { name: 'Delivery Confirmation.pdf', type: 'other' },
+  { name: 'Equipment Setup Instructions.pdf', type: 'other' },
+  { name: 'Patient Consent Form.pdf', type: 'other' },
+  { name: 'HIPAA Authorization.pdf', type: 'other' },
+  { name: 'Assignment of Benefits.pdf', type: 'other' },
+  { name: 'Medical Records Request.pdf', type: 'other' },
+  { name: 'Compliance Checklist.pdf', type: 'other' },
+  { name: 'Device Usage Report — 30 Day.pdf', type: 'other' },
+  { name: 'Device Usage Report — 90 Day.pdf', type: 'other' },
+  { name: 'Patient Satisfaction Survey.pdf', type: 'other' },
+  { name: 'Prescription — O2 Therapy.pdf', type: 'cmn' },
+  { name: 'Prescription — CPAP.pdf', type: 'cmn' },
+  { name: 'Recertification Form.pdf', type: 'cmn' },
+  { name: 'Appeal Supporting Documentation.pdf', type: 'prior_auth' },
 ];
+
+const docSources: PatientDocument['source'][] = ['bright_tree', 'ehr', 'tennr'];
+const docOrderIds = ['ORD-4821', 'ORD-3190', 'ORD-2847', 'ORD-5512', 'ORD-6103'];
+const docOrderNumbers = ['Nebulizer', 'CGM & Supplies', 'CPAP Machine', 'Aerosol Mask', 'Wheelchair'];
+
+const mockDocuments: PatientDocument[] = documentTemplates.map((tmpl, i) => {
+  const seed = (i * 7 + 3) % 100;
+  const date = new Date('2026-03-28');
+  date.setDate(date.getDate() - Math.floor(i * 1.7));
+  const orderIdx = seed % docOrderIds.length;
+  return {
+    id: `doc-${i + 1}`,
+    name: tmpl.name,
+    type: tmpl.type as PatientDocument['type'],
+    dateAdded: date.toISOString().split('T')[0],
+    source: docSources[seed % docSources.length],
+    url: '#',
+    orderId: docOrderIds[orderIdx],
+    orderNumber: docOrderNumbers[orderIdx],
+  };
+});
 
 function PatientLayoutContent({
   children: _children,

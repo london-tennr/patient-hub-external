@@ -14,9 +14,18 @@ import {
   type PaginationState,
   type SortingState,
 } from '@tanstack/react-table';
-import { CaretLeft, CaretRight, CaretUp, CaretDown, CheckCircle, WarningCircle, CircleNotch, Circle, Copy, Check, Eye } from '@phosphor-icons/react';
+import { CaretUp, CaretDown, CheckCircle, WarningCircle, CircleNotch, Circle, Copy, Check, Eye } from '@phosphor-icons/react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@tennr/lasso/table';
 import { Badge } from '@tennr/lasso/badge';
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationPrevious,
+  PaginationNext,
+  PaginationEllipsis,
+} from '@tennr/lasso/pagination';
 import { cn } from '@tennr/lasso/utils/cn';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@tennr/lasso/tooltip';
 import { Popover, PopoverTrigger, PopoverContent } from '@tennr/lasso/popover';
@@ -30,6 +39,15 @@ const statusBadgeConfig: Record<PatientStatus, { label: string; variant: 'succes
   blocked: { label: 'Blocked', variant: 'destructive' },
   completed: { label: 'Completed', variant: 'muted' },
   inactive: { label: 'Inactive', variant: 'outline' },
+};
+
+const statusSortOrder: Record<PatientStatus, number> = {
+  needs_attention: 0,
+  missing_info: 1,
+  on_track: 2,
+  blocked: 3,
+  completed: 4,
+  inactive: 5,
 };
 
 const priorityConfig: Record<PatientPriority, { label: string; variant: 'destructive' | 'warning' | 'muted' }> = {
@@ -54,7 +72,7 @@ const tennrStatusConfig: Record<Patient['tennrStatus'], { label: string; dotColo
 const stageConfig: Record<PatientStage, { label: string; step: number }> = {
   referral_received: { label: 'Referral Received', step: 1 },
   intake_review: { label: 'Intake Review', step: 2 },
-  insurance_verification: { label: 'Payer Verification', step: 3 },
+  insurance_verification: { label: 'Insurance Verification', step: 3 },
   prior_authorization: { label: 'Prior Authorization', step: 4 },
   scheduling: { label: 'Scheduling', step: 5 },
   ready_for_claim: { label: 'Ready for Claim', step: 6 },
@@ -97,6 +115,7 @@ function RecentActivityCell({ patient }: { patient: Patient }) {
           onMouseEnter={() => setOpen(true)}
           onMouseLeave={() => setOpen(false)}
           onClick={(e) => e.stopPropagation()}
+          suppressHydrationWarning
         >
           {cellContent}
         </button>
@@ -124,9 +143,6 @@ function RecentActivityCell({ patient }: { patient: Patient }) {
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-1.5 min-w-0">
                     <span className="text-xs font-medium text-text-primary truncate">{a.title}</span>
-                    {a.sourceLabel && (
-                      <span className="text-[10px] text-text-tertiary shrink-0 border border-border-secondary bg-bg-secondary px-1.5 py-0.5 rounded-full">{a.sourceLabel}</span>
-                    )}
                   </div>
                   <span className="text-[11px] text-text-tertiary whitespace-nowrap shrink-0">
                     {formatActivityDate(a.timestamp)} {formatActivityTime(a.timestamp)}
@@ -266,6 +282,7 @@ function RingProgress({ patient, onStageClick }: { patient: Patient; onStageClic
     <Tooltip>
       <TooltipTrigger asChild>
         <button
+          suppressHydrationWarning
           className={cn(
             'flex items-center gap-2.5',
             clickable && 'cursor-pointer hover:opacity-80 transition-opacity'
@@ -412,7 +429,7 @@ function DotProgress({ patient }: { patient: Patient }) {
   return (
     <Tooltip>
       <TooltipTrigger asChild>
-        <div className="flex flex-col gap-1.5 cursor-default">
+        <div className="flex flex-col gap-1.5 cursor-default" suppressHydrationWarning>
           {/* Dots row */}
           <div className="flex items-center gap-1">
             {stageOrder.map((stage, i) => {
@@ -552,7 +569,10 @@ function createColumns(onFilterBy?: OnFilterBy, onStageClick?: OnStageClick, pro
     columnHelper.accessor('status', {
       id: 'status',
       header: 'Status',
-      enableSorting: false,
+      enableSorting: true,
+      sortingFn: (rowA, rowB) => {
+        return (statusSortOrder[rowA.original.status] ?? 99) - (statusSortOrder[rowB.original.status] ?? 99);
+      },
       cell: (info) => {
         const patient = info.row.original;
         return <PatientStatusBadge status={patient.status} stage={patient.stage} actionCount={patient.actionCount} actionItems={patient.actionItems} onOpenWorkflow={() => onOpenWorkflow?.(patient)} onSelectAction={(actionId) => onOpenWorkflow?.(patient, actionId)} />;
@@ -572,6 +592,7 @@ function createColumns(onFilterBy?: OnFilterBy, onStageClick?: OnStageClick, pro
         <Tooltip>
           <TooltipTrigger asChild>
             <button
+              suppressHydrationWarning
               onClick={(e) => {
                 e.stopPropagation();
                 onPreviewPatient(info.row.original);
@@ -737,7 +758,7 @@ export function PatientsTableWithControls({
 export function usePatientsTable(patients: Patient[], onFilterBy?: OnFilterBy, onStageClick?: OnStageClick, progressStyle: ProgressStyle = 'stepper', onPreviewPatient?: OnPreviewPatient, onOpenWorkflow?: (patient: Patient, actionId?: string) => void) {
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
   const [columnOrder, setColumnOrder] = useState<ColumnOrderState>([]);
-  const [sorting, setSorting] = useState<SortingState>([]);
+  const [sorting, setSorting] = useState<SortingState>([{ id: 'status', desc: false }]);
   const [pagination, setPagination] = useState<PaginationState>({
     pageIndex: 0,
     pageSize: 10,
@@ -820,6 +841,57 @@ function getVisiblePages(current: number, total: number): (number | 'ellipsis')[
   return pages;
 }
 
+export function PatientsTablePagination({ table }: { table: ReturnType<typeof usePatientsTable> }) {
+  const pageCount = table.getPageCount();
+  const currentPage = table.getState().pagination.pageIndex;
+  const pageSize = table.getState().pagination.pageSize;
+  const totalRows = table.getFilteredRowModel().rows.length;
+  const startRow = currentPage * pageSize + 1;
+  const endRow = Math.min((currentPage + 1) * pageSize, totalRows);
+
+  if (pageCount <= 1) return null;
+
+  return (
+    <div className="flex items-center justify-between pt-4">
+      <span className="text-sm text-text-secondary">
+        Showing {startRow}-{endRow} of {totalRows} results
+      </span>
+      <Pagination className="w-auto mx-0">
+        <PaginationContent>
+          <PaginationItem>
+            <PaginationPrevious
+              onClick={() => table.previousPage()}
+              className={cn(!table.getCanPreviousPage() && 'pointer-events-none opacity-40')}
+            />
+          </PaginationItem>
+          {getVisiblePages(currentPage, pageCount).map((page, i) =>
+            page === 'ellipsis' ? (
+              <PaginationItem key={`ellipsis-${i}`}>
+                <PaginationEllipsis />
+              </PaginationItem>
+            ) : (
+              <PaginationItem key={page}>
+                <PaginationLink
+                  isActive={page === currentPage}
+                  onClick={() => table.setPageIndex(page)}
+                >
+                  {page + 1}
+                </PaginationLink>
+              </PaginationItem>
+            )
+          )}
+          <PaginationItem>
+            <PaginationNext
+              onClick={() => table.nextPage()}
+              className={cn(!table.getCanNextPage() && 'pointer-events-none opacity-40')}
+            />
+          </PaginationItem>
+        </PaginationContent>
+      </Pagination>
+    </div>
+  );
+}
+
 export function PatientsTableContent({ table, onPatientClick }: PatientsTableContentProps) {
   if (table.getRowModel().rows.length === 0) {
     return (
@@ -828,9 +900,6 @@ export function PatientsTableContent({ table, onPatientClick }: PatientsTableCon
       </div>
     );
   }
-
-  const pageCount = table.getPageCount();
-  const currentPage = table.getState().pagination.pageIndex;
 
   return (
     <>
@@ -861,7 +930,7 @@ export function PatientsTableContent({ table, onPatientClick }: PatientsTableCon
                             header.column.columnDef.header,
                             header.getContext()
                           )}
-                      {canSort && (
+                      {canSort && header.id !== 'status' && (
                         <span className="flex flex-col -space-y-1">
                           <CaretUp
                             weight="bold"
@@ -903,57 +972,6 @@ export function PatientsTableContent({ table, onPatientClick }: PatientsTableCon
         </TableBody>
       </Table>
       </div>
-
-      {pageCount > 1 && (
-        <div className="flex items-center justify-between px-3 py-2 md:px-4 md:py-3 border-t border-border">
-          <p className="hidden sm:block text-sm text-text-secondary">
-            Showing {currentPage * 10 + 1}-{Math.min((currentPage + 1) * 10, table.getRowCount())} of{' '}
-            {table.getRowCount()} results
-          </p>
-          <div className="flex items-center gap-1">
-            <button
-              onClick={() => table.previousPage()}
-              disabled={!table.getCanPreviousPage()}
-              className="flex items-center gap-1 px-2 py-1 text-sm text-text-secondary hover:text-text-primary disabled:opacity-40 disabled:pointer-events-none transition-colors cursor-pointer"
-            >
-              <CaretLeft weight="regular" className="size-3.5" />
-              Previous
-            </button>
-
-            <div className="hidden sm:flex items-center gap-1">
-            {getVisiblePages(currentPage, pageCount).map((page, i) =>
-              page === 'ellipsis' ? (
-                <span key={`ellipsis-${i}`} className="flex items-center justify-center size-8 text-sm text-text-secondary">
-                  &middot;&middot;&middot;
-                </span>
-              ) : (
-                <button
-                  key={page}
-                  onClick={() => table.setPageIndex(page)}
-                  className={cn(
-                    'flex items-center justify-center size-8 text-sm rounded-md transition-colors cursor-pointer',
-                    page === currentPage
-                      ? 'border border-border-primary text-text-primary font-medium'
-                      : 'text-text-secondary hover:text-text-primary'
-                  )}
-                >
-                  {page + 1}
-                </button>
-              )
-            )}
-            </div>
-
-            <button
-              onClick={() => table.nextPage()}
-              disabled={!table.getCanNextPage()}
-              className="flex items-center gap-1 px-2 py-1 text-sm text-text-secondary hover:text-text-primary disabled:opacity-40 disabled:pointer-events-none transition-colors cursor-pointer"
-            >
-              Next
-              <CaretRight weight="regular" className="size-3.5" />
-            </button>
-          </div>
-        </div>
-      )}
     </>
   );
 }
